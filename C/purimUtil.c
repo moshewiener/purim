@@ -79,6 +79,7 @@ void hideDataboxAll( void )
     gtk_widget_hide( label_Databox_Main );
     gtk_widget_hide( chkbtn_Databox );
     gtk_widget_hide( btn_Databox_add_family );
+    gtk_widget_hide( btn_Databox_chg_family );
     gtk_widget_hide( btn_Databox_del_family );
     gtk_widget_hide( btn_Databox_add_group );
     gtk_widget_hide( btn_Databox_del_group );
@@ -214,4 +215,26 @@ void go_state6 ( void )
     gtk_widget_show( btn_Databox_save_shipments_num );
     gtk_widget_show( btn_Databox_quit );
     gtk_widget_show( scale_shipments );
+}
+
+void go_state7 ( void )
+/* Change family */
+{
+    databox_request_service( DATABOX_REQ_CHGFAMILY );
+    gtk_widget_hide( window );
+    gtk_widget_show_all( Databox_window );
+    hideDataboxAll();
+    gtk_label_set_text( label_Databox_Main, "שינוי פרטי משפחה");
+    gtk_label_set_text( label_Databox_box1, "רשימת השכונות");
+    gtk_label_set_text( label_Databox_box2, "רשימת המשפחות" );
+    gtk_widget_show ( Databox_window );
+    gtk_widget_show ( label_Databox_Main );
+    gtk_widget_show( btn_Databox_chg_family );
+    gtk_widget_show( btn_Databox_quit );
+    gtk_widget_show( chkbtn_Databox );
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chkbtn_Databox), FALSE);
+    gtk_widget_show( listbox_Databox_1 );
+    gtk_widget_show( listbox_Databox_2 );
+    gtk_widget_show( label_Databox_box1 );
+    gtk_widget_show( label_Databox_box2 );
 }

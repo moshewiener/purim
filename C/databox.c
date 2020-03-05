@@ -2,7 +2,7 @@
 
 GtkWidget *Databox_window = NULL;
 /* buttons */
-GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_quit;
+GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_chg_family, *btn_Databox_quit;
 GtkWidget *btn_Databox_save_shipments_num, *btn_Databox_add_group, *btn_Databox_del_group;
 /* other widgets */
 GtkWidget *entry_Databox_1, *entry_Databox_2, *chkbtn_Databox;
@@ -13,6 +13,7 @@ GtkWidget *scale_shipments;
 static databoxreq request;
 static void callback_destroy_row (GtkWidget *row, gpointer data);
 static gint listBoxSortRows (GtkListBoxRow *row1, GtkListBoxRow *row2, gpointer user_data);
+static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer user_data);
 
 /*** CALLBACK functions ***/
 void  callback_databox_window_destroy (GtkWidget *widget, gint wiunId)
@@ -94,6 +95,26 @@ void callback_databox_add_family_button_clicked (GtkWidget *widget, gint windowI
     }
     gtk_widget_hide ( Databox_window );
     gtk_widget_show_all( window );
+    go_state1();
+}
+
+/***********************************************************/
+void callback_databox_chg_family_button_clicked (GtkWidget *widget, gint windowId)
+{
+    /* Change Family Button of second window was clicked. Hide second and show main window */
+    unsigned long personNum;
+    int groupNum;
+    gboolean isFree;
+    GtkWidget *row;
+    
+    personNum = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_2) );
+    groupNum = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_1) );
+    isFree = gtk_toggle_button_get_active (chkbtn_Databox);
+    g_print("Changing family #%d\n", personNum);
+    DB_set_person_groupnumber( personNum, groupNum );
+    DB_set_free( personNum, isFree );
+    gtk_widget_hide ( Databox_window );
+    gtk_widget_show_all( window );    
     go_state1();
 }
 
@@ -194,6 +215,21 @@ static void callback_destroy_row (GtkWidget *row, gpointer data)
     gtk_widget_destroy(row);
 }
 
+/**********************************************************/
+static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
+{
+    gboolean isFree;
+    int groupNum;
+    unsigned long personNum;
+    
+    personNum = gtk_list_box_row_get_index(row);
+    groupNum = groupNum = DB_get_person_groupnumber( personNum );
+    isFree = DB_is_free( personNum );
+    g_print("Group number of person %d is %d\n", personNum, groupNum);
+    /* set the group of 1st person in the groups listbox */
+    gtk_list_box_select_row (listbox_Databox_1, gtk_list_box_get_row_at_index( listbox_Databox_1 , groupNum ));
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chkbtn_Databox), isFree);    
+}
 
 /**********************************************************/
 void remove_all_rows_of_listbox( GtkWidget *listbox )
@@ -209,9 +245,10 @@ void databox_request_service( databoxreq req )
     char *title = "עדכון נתונים";
     GtkWidget *row, *label;
     String32 names[MAX_GROUPS_NUM];
-    int index, groups, shipments;
+    int index, groups, groupNum, shipments;
     unsigned long persons;
     char *firstname, *surname;
+    gboolean isFree;
     char familyname[96];
     
     if (Databox_window == NULL) create_databox_window( title );
@@ -231,6 +268,44 @@ void databox_request_service( databoxreq req )
         }
         //select the 1st row
         gtk_list_box_select_row (listbox_Databox_2, gtk_list_box_get_row_at_index( listbox_Databox_2 , 0 ));
+    }
+    else if (request == DATABOX_REQ_CHGFAMILY)
+    {
+        /* add group names to listbox */
+        groups = DB_get_groups_number();
+        for (index = 0; index < groups; index++)
+        {
+            sprintf(names[index], "%s", DB_get_groupname(index));
+            row = gtk_list_box_row_new();
+            label = gtk_label_new(&(names[index]));
+            gtk_label_set_xalign( label, 1.0); // right alignment
+            gtk_container_add (GTK_CONTAINER (row), label);
+            gtk_container_add (GTK_CONTAINER (listbox_Databox_1), row);
+        }
+        /* add families to listbox */
+        persons = DB_get_persons_num();
+        for (index = 0; index < persons; index++)
+        {
+            firstname = DB_get_firstname( index );
+            surname = DB_get_surname( index );
+            if ((firstname != NULL) && (surname != NULL))
+            {
+                sprintf(familyname, "%s %s", surname, firstname);
+                row = gtk_list_box_row_new();
+                label = gtk_label_new( familyname );
+                gtk_label_set_xalign( label, 1.0); // right alignment
+                gtk_container_add (GTK_CONTAINER (row), label);
+                gtk_container_add (GTK_CONTAINER (listbox_Databox_2), row);
+            }
+        }
+        //select the 1st row in familis listbox
+        gtk_list_box_select_row (listbox_Databox_2, gtk_list_box_get_row_at_index( listbox_Databox_2 , 0 ));
+        groupNum = DB_get_person_groupnumber( 0 );
+        isFree = DB_is_free( 0 );
+        g_print("Group number of person 0 is %d\n", groupNum);
+        // set the group of 1st person in the groups listbox */
+        gtk_list_box_select_row (listbox_Databox_1, gtk_list_box_get_row_at_index( listbox_Databox_1 , groupNum ));
+        gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chkbtn_Databox), isFree);
     }
     else if (request == DATABOX_REQ_DELFAMILY)
     {
@@ -309,6 +384,10 @@ gboolean create_databox_window( char *title )
         btn_Databox_add_family  = gtk_button_new_with_label ("הוסף משפחה");
         cssBtn = set_css_provider( 0x000000, 0x8080FF);
         css_set(cssBtn, btn_Databox_add_family);
+        
+        btn_Databox_chg_family = gtk_button_new_with_label ("שינוי משפחה");
+        cssBtn = set_css_provider( 0x000000, 0x80A0E0);
+        css_set(cssBtn, btn_Databox_chg_family);
         
         btn_Databox_del_family  = gtk_button_new_with_label ("הסר משפחה");
         cssBtn = set_css_provider( 0x000000, 0xFF8080);
@@ -397,6 +476,7 @@ gboolean create_databox_window( char *title )
         gtk_box_pack_start(GTK_BOX(vbox2_3), chkbtn_Databox, FALSE, FALSE, 5);
        
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_add_family, TRUE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_chg_family, TRUE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_del_family, TRUE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_add_group, TRUE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_del_group, TRUE, FALSE, 5);
@@ -409,7 +489,7 @@ gboolean create_databox_window( char *title )
         gtk_box_pack_start(GTK_BOX(vbox2_1), scrollwin, TRUE, TRUE, 5);
         
         /* create a listbox with no rows */
-        scrollwin = create_listbox_in_scrollwin( &listbox_Databox_2, 0, NULL, NULL );
+        scrollwin = create_listbox_in_scrollwin( &listbox_Databox_2, 0, NULL, (GCallback) row_selected_callback );
         gtk_widget_set_size_request( scrollwin, 50, 200 );
         gtk_box_pack_start(GTK_BOX(vbox2_2), scrollwin, TRUE, TRUE, 5);
 
@@ -420,6 +500,8 @@ gboolean create_databox_window( char *title )
                           G_CALLBACK (callback_databox_quit_button_clicked), 2);
         g_signal_connect (G_OBJECT (btn_Databox_add_family), "clicked", 
                           G_CALLBACK (callback_databox_add_family_button_clicked), 2);
+        g_signal_connect (G_OBJECT (btn_Databox_chg_family), "clicked", 
+                          G_CALLBACK (callback_databox_chg_family_button_clicked), 2);
         g_signal_connect (G_OBJECT (btn_Databox_del_family), "clicked", 
                           G_CALLBACK (callback_databox_del_family_button_clicked), 2);
         g_signal_connect (G_OBJECT (btn_Databox_add_group), "clicked", 

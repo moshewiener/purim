@@ -7,6 +7,7 @@
 typedef char String32[32];
 typedef enum {
     DATABOX_REQ_ADDFAMILY,
+    DATABOX_REQ_CHGFAMILY,
     DATABOX_REQ_DELFAMILY,
     DATABOX_REQ_ADDGROUP,
     DATABOX_REQ_DELGROUP,
@@ -27,7 +28,7 @@ extern GtkWidget *labelMain, *frame_listbox;
 extern GtkWidget* window, *list_box;
 
 /* Databox widgets */
-extern GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_quit;
+extern GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_chg_family, *btn_Databox_quit;
 extern GtkWidget *btn_Databox_add_group, *btn_Databox_del_group, *btn_Databox_save_shipments_num;
 extern GtkWidget *Databox_window, *entry_Databox_1, *label_Databox_1, *label_Databox_box1, *label_Databox_box2;
 extern GtkWidget *entry_Databox_2, *label_Databox_2, *label_Databox_Main, *chkbtn_Databox, *scale_shipments;
@@ -66,6 +67,7 @@ char *DB_get_surname( unsigned long personNum );
 int DB_get_groups_number( void );
 char *DB_get_person_groupname( unsigned long personNum);
 int DB_get_person_groupnumber( unsigned long personNum);
+gboolean DB_set_person_groupnumber( unsigned long personNum, int groupNum);
 char *DB_get_groupname( int groupNum );
 gboolean DB_add_group( char *groupName );
 gboolean DB_del_group( int groupNum, int movePersonsToGroup );
@@ -97,4 +99,5 @@ void go_state3( void ); //delete family
 void go_state4( void ); //add groupo
 void go_state5( void ); //delete group
 void go_state6( void ); // set shipments number
+void go_state7( void ); // changfe family
 #endif /* __PURIM_API_H__ */

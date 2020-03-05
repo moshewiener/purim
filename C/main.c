@@ -20,7 +20,7 @@ typedef struct button_data {
 
 #define MAX_BUTTONS_IN_FRAME 12
 
-void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer user_data);
+static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer user_data);
 gboolean listbox_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean newDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean help_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
@@ -64,7 +64,7 @@ gboolean callback_button_pressed_about(GtkWidget *widget, GdkEvent  *event, gpoi
 }
 
 /***********************************************************************************/
-void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
+static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
 {
     GtkWidget *child;
     char *labeltext = NULL;
@@ -236,6 +236,13 @@ gboolean newDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpoi
 gboolean add_family_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
 {
     go_state2();
+    return TRUE;
+}
+
+/*---------------------------------------------------------*/
+gboolean chg_family_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+{
+    go_state7();
     return TRUE;
 }
 
@@ -613,6 +620,7 @@ int main( int argc, char *argv[] )
     g_signal_connect (btnNewDB, "button-press-event", G_CALLBACK (newDB_button_pressed_callback), NULL);
     g_signal_connect (btnLoadDbFile, "button-press-event", G_CALLBACK (loadDB_button_pressed_callback), NULL);
     g_signal_connect (btnAddFamily, "button-press-event", G_CALLBACK (add_family_button_pressed_callback), NULL);
+    g_signal_connect (btnChgangeFamily, "button-press-event", G_CALLBACK (chg_family_button_pressed_callback), NULL);
     g_signal_connect (btnDelFamily, "button-press-event", G_CALLBACK (del_family_button_pressed_callback), NULL);
     g_signal_connect (btnAddGroup, "button-press-event", G_CALLBACK (add_group_button_pressed_callback), NULL);
     g_signal_connect (btnDelGroup, "button-press-event", G_CALLBACK (del_group_button_pressed_callback), NULL);

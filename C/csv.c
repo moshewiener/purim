@@ -203,6 +203,35 @@ int DB_get_person_groupnumber( unsigned long personNum)
     return p_person_records[personNum].groupnum;
 }
 
+/***************************************************/
+gboolean DB_set_person_groupnumber( unsigned long personNum, int groupNum)
+{
+    char *errMsg;
+    
+    if (p_person_records == NULL)
+    {
+        errMsg = "נתוני התושבים לא טעונים";
+        goto FAIL;
+    }
+    if (personNum >= db_persons_count)
+    {
+        errMsg = "מספר התושב חורג מעבר לגבול";
+        goto FAIL;
+    }
+    if (groupNum >= MAX_GROUPS_NUM)
+    {
+        errMsg = "מספר השכונה חורג מעבר לגבול";
+        goto FAIL;
+    }
+    
+    p_person_records[personNum].groupnum = groupNum;
+    strcpy( p_person_records[personNum].groupname , db_groupnames[groupNum] );
+    return TRUE;
+FAIL:
+    msgBoxError( window, errMsg );
+    return FALSE;
+}
+
 /**************************************************/
 gboolean DB_add_group( char *groupName )
 {
