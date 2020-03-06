@@ -6,7 +6,8 @@ states:
     2-asked to add family       3-asked to del family
     4-asked to add group        5-asked to del group
     6-define num of shipments   7-asked to change family
-    8-manual shipment           9-calculate
+    8-extra shipments           9-manual shipment
+    10-calculate
 *********************************************************/ 
 static gint state = 0;
 
@@ -79,7 +80,7 @@ void hideDataboxAll( void )
     gtk_widget_hide( label_Databox_Main );
     gtk_widget_hide( chkbtn_Databox );
     gtk_widget_hide( btn_Databox_add_family );
-    gtk_widget_hide( btn_Databox_chg_family );
+    gtk_widget_hide( btn_Databox_save_changes );
     gtk_widget_hide( btn_Databox_del_family );
     gtk_widget_hide( btn_Databox_add_group );
     gtk_widget_hide( btn_Databox_del_group );
@@ -229,10 +230,31 @@ void go_state7 ( void )
     gtk_label_set_text( label_Databox_box2, "רשימת המשפחות" );
     gtk_widget_show ( Databox_window );
     gtk_widget_show ( label_Databox_Main );
-    gtk_widget_show( btn_Databox_chg_family );
+    gtk_widget_show( btn_Databox_save_changes );
     gtk_widget_show( btn_Databox_quit );
     gtk_widget_show( chkbtn_Databox );
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chkbtn_Databox), FALSE);
+    gtk_widget_show( listbox_Databox_1 );
+    gtk_widget_show( listbox_Databox_2 );
+    gtk_widget_show( label_Databox_box1 );
+    gtk_widget_show( label_Databox_box2 );
+}
+
+void go_state8 ( void )
+/* Extra shipments */
+{
+    databox_request_service( DATABOX_REQ_EXTRA );
+    gtk_widget_hide( window );
+    gtk_widget_show_all( Databox_window );
+    hideDataboxAll();
+    gtk_label_set_text( label_Databox_Main, "משלוחים נוספים");
+    gtk_label_set_text( label_Databox_box1, "מקבלי משלוח נוסף");
+    gtk_label_set_text( label_Databox_box2, "רשימת המשפחות הפטורות" );
+    gtk_label_set_text( label_Databox_box3, "רשימת המשפחות הנותנות" );
+    gtk_widget_show ( Databox_window );
+    gtk_widget_show ( label_Databox_Main );
+    gtk_widget_show( btn_Databox_save_changes );
+    gtk_widget_show( btn_Databox_quit );
     gtk_widget_show( listbox_Databox_1 );
     gtk_widget_show( listbox_Databox_2 );
     gtk_widget_show( label_Databox_box1 );

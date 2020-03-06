@@ -2,18 +2,20 @@
 
 GtkWidget *Databox_window = NULL;
 /* buttons */
-GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_chg_family, *btn_Databox_quit;
+GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_save_changes, *btn_Databox_quit;
 GtkWidget *btn_Databox_save_shipments_num, *btn_Databox_add_group, *btn_Databox_del_group;
 /* other widgets */
 GtkWidget *entry_Databox_1, *entry_Databox_2, *chkbtn_Databox;
-GtkListBox *listbox_Databox_1, *listbox_Databox_2;
-GtkWidget *label_Databox_Main, *label_Databox_box1, *label_Databox_box2, *label_Databox_1, *label_Databox_2;
+GtkListBox *listbox_Databox_1, *listbox_Databox_2, *listbox_Databox_3;
+GtkWidget *label_Databox_Main, *label_Databox_box1, *label_Databox_box2, *label_Databox_box3, *label_Databox_1, *label_Databox_2;
 GtkWidget *scale_shipments;
 
 static databoxreq request;
 static void callback_destroy_row (GtkWidget *row, gpointer data);
 static gint listBoxSortRows (GtkListBoxRow *row1, GtkListBoxRow *row2, gpointer user_data);
 static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer user_data);
+static void callback_databox_add_family_button_clicked (GtkWidget *widget, gint windowId);
+static void callback_databox_save_changes_button_clicked(GtkWidget *widget, gint *p_req);
 
 /*** CALLBACK functions ***/
 void  callback_databox_window_destroy (GtkWidget *widget, gint wiunId)
@@ -36,7 +38,7 @@ void  callback_databox_quit_button_clicked (GtkWidget *widget, gint windowId)
 {
     gchar *title;
     
-    g_print("Databox Quit button clicked: Toggle to main window...\n");
+    /* Databox Quit button clicked: Toggle to main window */
     gtk_widget_show_all( window );
     gtk_widget_hide ( Databox_window );
     gtk_entry_set_text( entry_Databox_1, "" );
@@ -45,7 +47,7 @@ void  callback_databox_quit_button_clicked (GtkWidget *widget, gint windowId)
 }
 
 /***********************************************************/
-void callback_databox_add_family_button_clicked (GtkWidget *widget, gint windowId)
+static void callback_databox_add_family_button_clicked (GtkWidget *widget, gint windowId)
 {
     long recordNum;
     gboolean nonsender;
@@ -99,23 +101,30 @@ void callback_databox_add_family_button_clicked (GtkWidget *widget, gint windowI
 }
 
 /***********************************************************/
-void callback_databox_chg_family_button_clicked (GtkWidget *widget, gint windowId)
+static void callback_databox_save_changes_button_clicked (GtkWidget *widget, gint *p_req)
 {
-    /* Change Family Button of second window was clicked. Hide second and show main window */
     unsigned long personNum;
     int groupNum;
     gboolean isFree;
     GtkWidget *row;
-    
-    personNum = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_2) );
-    groupNum = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_1) );
-    isFree = gtk_toggle_button_get_active (chkbtn_Databox);
-    g_print("Changing family #%d\n", personNum);
-    DB_set_person_groupnumber( personNum, groupNum );
-    DB_set_free( personNum, isFree );
-    gtk_widget_hide ( Databox_window );
-    gtk_widget_show_all( window );    
-    go_state1();
+  
+    if ( *p_req == DATABOX_REQ_CHGFAMILY )
+    { /* Save Button was clicked when handling Change Family request. */
+        personNum = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_2) );
+        groupNum = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_1) );
+        isFree = gtk_toggle_button_get_active (chkbtn_Databox);
+        g_print("Changing family #%d\n", personNum);
+        DB_set_person_groupnumber( personNum, groupNum );
+        DB_set_free( personNum, isFree );
+        /* Hide second and show main window */
+        gtk_widget_hide ( Databox_window );
+        gtk_widget_show_all( window );    
+        go_state1();
+        return;
+    }
+    else if (*p_req == DATABOX_REQ_EXTRA)
+    { /* Save Button was clicked when handling Extra Shipments request. */
+    }
 }
 
 /***********************************************************/
@@ -225,7 +234,6 @@ static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer
     personNum = gtk_list_box_row_get_index(row);
     groupNum = groupNum = DB_get_person_groupnumber( personNum );
     isFree = DB_is_free( personNum );
-    g_print("Group number of person %d is %d\n", personNum, groupNum);
     /* set the group of 1st person in the groups listbox */
     gtk_list_box_select_row (listbox_Databox_1, gtk_list_box_get_row_at_index( listbox_Databox_1 , groupNum ));
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chkbtn_Databox), isFree);    
@@ -241,7 +249,6 @@ void remove_all_rows_of_listbox( GtkWidget *listbox )
 /*****************************************/
 void databox_request_service( databoxreq req )
 {
-    request = req;
     char *title = "עדכון נתונים";
     GtkWidget *row, *label;
     String32 names[MAX_GROUPS_NUM];
@@ -251,6 +258,7 @@ void databox_request_service( databoxreq req )
     gboolean isFree;
     char familyname[96];
     
+    request = req;
     if (Databox_window == NULL) create_databox_window( title );
     remove_all_rows_of_listbox( listbox_Databox_1 );
     remove_all_rows_of_listbox( listbox_Databox_2 );
@@ -373,10 +381,9 @@ gboolean create_databox_window( char *title )
         GtkWidget *scrollwin, *main_vbox, *hbox1, *hbox2, *hbox3;
         GtkWidget *vbox2_1, *vbox2_2, *vbox2_3;
         GtkWidget *hbox2_3_1, *hbox2_3_2;
+        GtkWidget *labelEmpty;
         GtkCssProvider *cssBtn;
         GdkPixbuf *pixbuf;
- 
-        g_print("create_databox_window\n");
         
         // Create the widgets
         Databox_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
@@ -385,9 +392,9 @@ gboolean create_databox_window( char *title )
         cssBtn = set_css_provider( 0x000000, 0x8080FF);
         css_set(cssBtn, btn_Databox_add_family);
         
-        btn_Databox_chg_family = gtk_button_new_with_label ("שינוי משפחה");
+        btn_Databox_save_changes = gtk_button_new_with_label ("שמור שינויים");
         cssBtn = set_css_provider( 0x000000, 0x80A0E0);
-        css_set(cssBtn, btn_Databox_chg_family);
+        css_set(cssBtn, btn_Databox_save_changes);
         
         btn_Databox_del_family  = gtk_button_new_with_label ("הסר משפחה");
         cssBtn = set_css_provider( 0x000000, 0xFF8080);
@@ -425,6 +432,7 @@ gboolean create_databox_window( char *title )
         chkbtn_Databox = gtk_check_button_new_with_label("פטור ממשלוח");
         label_Databox_box1 = gtk_label_new("BOoo..");
         label_Databox_box2 = gtk_label_new("");
+        label_Databox_box3 = gtk_label_new("");
         
         scale_shipments = gtk_scale_new_with_range( GTK_ORIENTATION_HORIZONTAL, 1, MAX_SHIPMENTS, 1);
         gtk_scale_set_digits( scale_shipments, 0 );
@@ -464,6 +472,7 @@ gboolean create_databox_window( char *title )
 
         gtk_box_pack_start(GTK_BOX(vbox2_1), label_Databox_box1, FALSE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(vbox2_2), label_Databox_box2, FALSE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(vbox2_3), label_Databox_box3, FALSE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(vbox2_2), scale_shipments, FALSE, FALSE, 5);
         
         gtk_box_pack_start(GTK_BOX(vbox2_3), hbox2_3_1, FALSE, FALSE, 5);
@@ -476,22 +485,31 @@ gboolean create_databox_window( char *title )
         gtk_box_pack_start(GTK_BOX(vbox2_3), chkbtn_Databox, FALSE, FALSE, 5);
        
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_add_family, TRUE, FALSE, 5);
-        gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_chg_family, TRUE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_save_changes, TRUE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_del_family, TRUE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_add_group, TRUE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_del_group, TRUE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_save_shipments_num, TRUE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_quit, TRUE, FALSE, 5);
  
+        /* create placeholder label for empty list boxes */
+        labelEmpty = gtk_label_new("-- רשימה ריקה --");
         /* create a listbox with no rows */
         scrollwin = create_listbox_in_scrollwin( &listbox_Databox_1, 0, NULL, NULL );
+        gtk_list_box_set_placeholder (listbox_Databox_1, labelEmpty);
         gtk_widget_set_size_request( scrollwin, 50, 200 );
         gtk_box_pack_start(GTK_BOX(vbox2_1), scrollwin, TRUE, TRUE, 5);
         
         /* create a listbox with no rows */
         scrollwin = create_listbox_in_scrollwin( &listbox_Databox_2, 0, NULL, (GCallback) row_selected_callback );
+        //gtk_list_box_set_placeholder (listbox_Databox_2, labelEmpty);
         gtk_widget_set_size_request( scrollwin, 50, 200 );
         gtk_box_pack_start(GTK_BOX(vbox2_2), scrollwin, TRUE, TRUE, 5);
+        
+        /* create a listbox with no rows */
+        scrollwin = create_listbox_in_scrollwin( &listbox_Databox_3, 0, NULL, (GCallback) row_selected_callback );
+        gtk_widget_set_size_request( scrollwin, 50, 200 );
+        gtk_box_pack_start(GTK_BOX(vbox2_3), scrollwin, TRUE, TRUE, 5);
 
         /* connect callbacks to signals */        
         g_signal_connect (G_OBJECT (Databox_window), "destroy", 
@@ -500,8 +518,8 @@ gboolean create_databox_window( char *title )
                           G_CALLBACK (callback_databox_quit_button_clicked), 2);
         g_signal_connect (G_OBJECT (btn_Databox_add_family), "clicked", 
                           G_CALLBACK (callback_databox_add_family_button_clicked), 2);
-        g_signal_connect (G_OBJECT (btn_Databox_chg_family), "clicked", 
-                          G_CALLBACK (callback_databox_chg_family_button_clicked), 2);
+        g_signal_connect (G_OBJECT (btn_Databox_save_changes), "clicked", 
+                          G_CALLBACK (callback_databox_save_changes_button_clicked), (void*)(&request));
         g_signal_connect (G_OBJECT (btn_Databox_del_family), "clicked", 
                           G_CALLBACK (callback_databox_del_family_button_clicked), 2);
         g_signal_connect (G_OBJECT (btn_Databox_add_group), "clicked", 

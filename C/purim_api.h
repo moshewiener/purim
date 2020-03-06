@@ -11,9 +11,10 @@ typedef enum {
     DATABOX_REQ_DELFAMILY,
     DATABOX_REQ_ADDGROUP,
     DATABOX_REQ_DELGROUP,
-    DATABOX_REQ_SHIPMENTSNUM
+    DATABOX_REQ_SHIPMENTSNUM,
+    DATABOX_REQ_EXTRA
 } databoxreq;
-    
+
 #define MAX_GROUPS_NUM      12
 #define MAX_SHIPMENTS       12
 #define MAX_EXTRA_SHIPMENTS 5
@@ -28,11 +29,11 @@ extern GtkWidget *labelMain, *frame_listbox;
 extern GtkWidget* window, *list_box;
 
 /* Databox widgets */
-extern GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_chg_family, *btn_Databox_quit;
+extern GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_save_changes, *btn_Databox_quit;
 extern GtkWidget *btn_Databox_add_group, *btn_Databox_del_group, *btn_Databox_save_shipments_num;
-extern GtkWidget *Databox_window, *entry_Databox_1, *label_Databox_1, *label_Databox_box1, *label_Databox_box2;
+extern GtkWidget *Databox_window, *entry_Databox_1, *label_Databox_1, *label_Databox_box1, *label_Databox_box2, *label_Databox_box3;
 extern GtkWidget *entry_Databox_2, *label_Databox_2, *label_Databox_Main, *chkbtn_Databox, *scale_shipments;
-extern GtkListBox *listbox_Databox_1, *listbox_Databox_2;
+extern GtkListBox *listbox_Databox_1, *listbox_Databox_2, *listbox_Databox_3;
 
 /* General functions */
 int my_atoi( char *strNum );
@@ -100,4 +101,5 @@ void go_state4( void ); //add groupo
 void go_state5( void ); //delete group
 void go_state6( void ); // set shipments number
 void go_state7( void ); // changfe family
+void go_state8( void ); // extra shipments
 #endif /* __PURIM_API_H__ */

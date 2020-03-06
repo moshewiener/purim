@@ -28,6 +28,7 @@ gboolean add_family_button_pressed_callback(GtkWidget *widget, GdkEvent  *event,
 gboolean del_family_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean add_group_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean del_group_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
+gboolean extra_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean shipmentsnum_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean calculate_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 
@@ -264,6 +265,13 @@ gboolean add_group_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, 
 gboolean del_group_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
 {
     go_state5();
+    return TRUE;
+}
+
+/*---------------------------------------------------------*/
+gboolean extra_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+{
+    go_state8();
     return TRUE;
 }
 
@@ -624,6 +632,7 @@ int main( int argc, char *argv[] )
     g_signal_connect (btnDelFamily, "button-press-event", G_CALLBACK (del_family_button_pressed_callback), NULL);
     g_signal_connect (btnAddGroup, "button-press-event", G_CALLBACK (add_group_button_pressed_callback), NULL);
     g_signal_connect (btnDelGroup, "button-press-event", G_CALLBACK (del_group_button_pressed_callback), NULL);
+    g_signal_connect (btnExtra, "button-press-event", G_CALLBACK (extra_button_pressed_callback), NULL);
     g_signal_connect (btnShipmentsNum, "button-press-event", G_CALLBACK (shipmentsnum_button_pressed_callback), NULL);
     g_signal_connect (btnSaveDbFile, "button-press-event", G_CALLBACK (saveDB_button_pressed_callback), NULL);
     g_signal_connect (btnCalculate, "button-press-event", G_CALLBACK (calculate_button_pressed_callback), NULL);
