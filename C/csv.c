@@ -142,6 +142,19 @@ unsigned long DB_get_persons_num( void )
 {
     return db_persons_count;
 }
+
+/********************************************/
+unsigned long DB_get_givers_num( void )
+{
+    unsigned long personNum, givers;
+    
+    if (p_person_records == NULL) return 0;
+    for (personNum = 0, givers = 0; personNum < db_persons_count; personNum++)
+        if (p_person_records[personNum].free == FALSE)
+            givers++;
+    return givers;
+}
+
 /*******************************************/
 int DB_get_shipments_num( void )
 {
@@ -254,7 +267,7 @@ gboolean DB_del_group( int groupNum, int movePersonsToGroup )
     if ((groupNum < 0) || (groupNum >= db_groups_num)) return FALSE;
     if (groupNum == movePersonsToGroup) return FALSE;
     if ((movePersonsToGroup < 0) || (movePersonsToGroup >= db_groups_num)) return FALSE;
-    //erase the group from the geoups list
+    //erase the group from the groups list
     for (index = groupNum + 1; index < db_groups_num; index++)
     {
         memcpy( db_groupnames[index-1], db_groupnames[index], sizeof(db_groupnames[0]) );

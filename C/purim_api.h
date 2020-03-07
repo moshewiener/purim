@@ -31,9 +31,10 @@ extern GtkWidget* window, *list_box;
 /* Databox widgets */
 extern GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_save_changes, *btn_Databox_quit;
 extern GtkWidget *btn_Databox_add_group, *btn_Databox_del_group, *btn_Databox_save_shipments_num;
-extern GtkWidget *Databox_window, *entry_Databox_1, *label_Databox_1, *label_Databox_box1, *label_Databox_box2, *label_Databox_box3;
-extern GtkWidget *entry_Databox_2, *label_Databox_2, *label_Databox_Main, *chkbtn_Databox, *scale_shipments;
+extern GtkWidget *Databox_window, *label1_Databox_hbox1, *label1_Databox_vbox2_1, *label1_Databox_vbox2_2, *label1_Databox_vbox2_3;
+extern GtkWidget *label1_Databox_hbox2_3_1, *label1_Databox_hbox2_3_2;
 extern GtkListBox *listbox_Databox_1, *listbox_Databox_2, *listbox_Databox_3;
+extern GtkWidget *entry_Databox_1, *entry_Databox_2, *chkbtn_Databox, *scale_Databox_shipments;
 
 /* General functions */
 int my_atoi( char *strNum );
@@ -61,6 +62,7 @@ gboolean DB_init_purim_db(char *filename);
 gboolean DB_save_purim_db(char *filename);
 void DB_close_purim_db( void );
 unsigned long DB_get_persons_num( void );
+unsigned long DB_get_givers_num( void );
 int DB_get_shipments_num( void );
 void DB_set_shipments_num( int shipments);
 char *DB_get_firstname( unsigned long personNum );

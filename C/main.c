@@ -217,7 +217,8 @@ gboolean help_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpoin
     
     DB_debug_print_groups();
     DB_debug_print_all_records();
-    printf("Number of persons %lu. Number of shipments: %d\n", DB_get_persons_num(), DB_get_shipments_num());
+    printf("Number of persons %lu. Number of givers %d. Number of shipments: %d\n",
+           DB_get_persons_num(), DB_get_givers_num(), DB_get_shipments_num());
 
     CALC_debug_print_shipments();
     

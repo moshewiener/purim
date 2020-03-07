@@ -4,11 +4,14 @@ GtkWidget *Databox_window = NULL;
 /* buttons */
 GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_save_changes, *btn_Databox_quit;
 GtkWidget *btn_Databox_save_shipments_num, *btn_Databox_add_group, *btn_Databox_del_group;
-/* other widgets */
-GtkWidget *entry_Databox_1, *entry_Databox_2, *chkbtn_Databox;
+/* text entries */
+GtkWidget *entry_Databox_1, *entry_Databox_2;
+/* lables */
+GtkWidget *label1_Databox_hbox1, *label1_Databox_vbox2_1, *label1_Databox_vbox2_2, *label1_Databox_vbox2_3; 
+GtkWidget *label1_Databox_hbox2_3_1, *label1_Databox_hbox2_3_2;
+/* other widgets */ 
 GtkListBox *listbox_Databox_1, *listbox_Databox_2, *listbox_Databox_3;
-GtkWidget *label_Databox_Main, *label_Databox_box1, *label_Databox_box2, *label_Databox_box3, *label_Databox_1, *label_Databox_2;
-GtkWidget *scale_shipments;
+GtkWidget *scale_Databox_shipments, *chkbtn_Databox;
 
 static databoxreq request;
 static void callback_destroy_row (GtkWidget *row, gpointer data);
@@ -197,7 +200,7 @@ void callback_databox_del_group_button_clicked (GtkWidget *widget, gint windowId
     }
     groupnum = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_2) );
     newGroupNum = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_1) );
-    if (groupsNum == newGroupNum)
+    if (groupnum == newGroupNum)
     {
         msgBoxError( Databox_window, "לא ניתן להעביר תושבים לקבוצה העומדת להמחק" );
         goto TAIL;
@@ -213,7 +216,7 @@ TAIL:
 /********************************************************/
 void callback_databox_shipments_num_button_clicked(GtkWidget *widget, gint windowId)
 {
-    DB_set_shipments_num( gtk_range_get_value( scale_shipments ));
+    DB_set_shipments_num( gtk_range_get_value( scale_Databox_shipments ));
     gtk_widget_hide ( Databox_window );
     gtk_widget_show_all( window );
     go_state1();
@@ -229,9 +232,12 @@ static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer
 {
     gboolean isFree;
     int groupNum;
-    unsigned long personNum;
+    unsigned long personNum, persons;
     
+    if (row == NULL) return;
+    persons = DB_get_persons_num();
     personNum = gtk_list_box_row_get_index(row);
+    if (personNum >= persons) return;
     groupNum = groupNum = DB_get_person_groupnumber( personNum );
     isFree = DB_is_free( personNum );
     /* set the group of 1st person in the groups listbox */
@@ -371,7 +377,7 @@ void databox_request_service( databoxreq req )
     else if (request == DATABOX_REQ_SHIPMENTSNUM)
     {
         shipments = DB_get_shipments_num();
-        gtk_range_set_value ( scale_shipments, shipments);
+        gtk_range_set_value ( scale_Databox_shipments, shipments);
     }
 }
 
@@ -416,28 +422,28 @@ gboolean create_databox_window( char *title )
         cssBtn = set_css_provider( 0x000000, 0x009F00);
         css_set(cssBtn, btn_Databox_save_shipments_num);
         
-        label_Databox_Main = gtk_label_new("הוספת משפחה");
+        label1_Databox_hbox1 = gtk_label_new("הוספת משפחה");
         cssBtn = set_css_provider( 0xFF0000, 0xE0E0E0);
         if (cssBtn != NULL)
-            css_set(cssBtn, label_Databox_Main);
+            css_set(cssBtn, label1_Databox_hbox1);
         
         entry_Databox_1 = gtk_entry_new();
         gtk_entry_set_text( entry_Databox_1, "" );
-        label_Databox_1 = gtk_label_new("");
+        label1_Databox_hbox2_3_1 = gtk_label_new("");
         
         entry_Databox_2 = gtk_entry_new();
         gtk_entry_set_text( entry_Databox_2, "" );
-        label_Databox_2 = gtk_label_new("");
+        label1_Databox_hbox2_3_2 = gtk_label_new("");
         
         chkbtn_Databox = gtk_check_button_new_with_label("פטור ממשלוח");
-        label_Databox_box1 = gtk_label_new("BOoo..");
-        label_Databox_box2 = gtk_label_new("");
-        label_Databox_box3 = gtk_label_new("");
+        label1_Databox_vbox2_1 = gtk_label_new("BOoo..");
+        label1_Databox_vbox2_2 = gtk_label_new("");
+        label1_Databox_vbox2_3 = gtk_label_new("");
         
-        scale_shipments = gtk_scale_new_with_range( GTK_ORIENTATION_HORIZONTAL, 1, MAX_SHIPMENTS, 1);
-        gtk_scale_set_digits( scale_shipments, 0 );
-        gtk_scale_set_draw_value( scale_shipments, TRUE );
-        gtk_widget_set_size_request( scale_shipments, 200, 40);
+        scale_Databox_shipments = gtk_scale_new_with_range( GTK_ORIENTATION_HORIZONTAL, 1, MAX_SHIPMENTS, 1);
+        gtk_scale_set_digits( scale_Databox_shipments, 0 );
+        gtk_scale_set_draw_value( scale_Databox_shipments, TRUE );
+        gtk_widget_set_size_request( scale_Databox_shipments, 200, 40);
         
         // set window icon
         pixbuf = gdk_pixbuf_new_from_inline(-1, ozen_haman_icon_inline, FALSE, NULL);
@@ -464,24 +470,24 @@ gboolean create_databox_window( char *title )
         gtk_box_pack_start(GTK_BOX(main_vbox), hbox2, FALSE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(main_vbox), hbox3, FALSE, FALSE, 5);
         
-        gtk_box_pack_start(GTK_BOX(hbox1), label_Databox_Main, TRUE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(hbox1), label1_Databox_hbox1, TRUE, FALSE, 5);
         
-        gtk_box_pack_start(GTK_BOX(hbox2), vbox2_1, FALSE, FALSE, 5);
-        gtk_box_pack_start(GTK_BOX(hbox2), vbox2_2, FALSE, FALSE, 5);
-        gtk_box_pack_start(GTK_BOX(hbox2), vbox2_3, FALSE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(hbox2), vbox2_1, TRUE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(hbox2), vbox2_2, TRUE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(hbox2), vbox2_3, TRUE, FALSE, 5);
 
-        gtk_box_pack_start(GTK_BOX(vbox2_1), label_Databox_box1, FALSE, FALSE, 5);
-        gtk_box_pack_start(GTK_BOX(vbox2_2), label_Databox_box2, FALSE, FALSE, 5);
-        gtk_box_pack_start(GTK_BOX(vbox2_3), label_Databox_box3, FALSE, FALSE, 5);
-        gtk_box_pack_start(GTK_BOX(vbox2_2), scale_shipments, FALSE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(vbox2_1), label1_Databox_vbox2_1, FALSE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(vbox2_2), label1_Databox_vbox2_2, FALSE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(vbox2_3), label1_Databox_vbox2_3, FALSE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(vbox2_2), scale_Databox_shipments, FALSE, FALSE, 5);
         
         gtk_box_pack_start(GTK_BOX(vbox2_3), hbox2_3_1, FALSE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(vbox2_3), hbox2_3_2, FALSE, FALSE, 5);
         
         gtk_box_pack_start(GTK_BOX(hbox2_3_1), entry_Databox_1, FALSE, FALSE, 5);
-        gtk_box_pack_start(GTK_BOX(hbox2_3_1), label_Databox_1, FALSE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(hbox2_3_1), label1_Databox_hbox2_3_1, FALSE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(hbox2_3_2), entry_Databox_2, FALSE, FALSE, 5);
-        gtk_box_pack_start(GTK_BOX(hbox2_3_2), label_Databox_2, FALSE, FALSE, 5);
+        gtk_box_pack_start(GTK_BOX(hbox2_3_2), label1_Databox_hbox2_3_2, FALSE, FALSE, 5);
         gtk_box_pack_start(GTK_BOX(vbox2_3), chkbtn_Databox, FALSE, FALSE, 5);
        
         gtk_box_pack_start(GTK_BOX(hbox3), btn_Databox_add_family, TRUE, FALSE, 5);

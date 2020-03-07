@@ -74,10 +74,10 @@ void hideAll( void )
 void hideDataboxAll( void )
 {
     gtk_widget_hide( entry_Databox_1 );
-    gtk_widget_hide( label_Databox_1 );
+    gtk_widget_hide( label1_Databox_hbox2_3_1 );
     gtk_widget_hide( entry_Databox_2 );
-    gtk_widget_hide( label_Databox_2 );
-    gtk_widget_hide( label_Databox_Main );
+    gtk_widget_hide( label1_Databox_hbox2_3_2 );
+    gtk_widget_hide( label1_Databox_hbox1 );
     gtk_widget_hide( chkbtn_Databox );
     gtk_widget_hide( btn_Databox_add_family );
     gtk_widget_hide( btn_Databox_save_changes );
@@ -87,9 +87,10 @@ void hideDataboxAll( void )
     gtk_widget_hide( btn_Databox_quit );
     gtk_widget_hide( listbox_Databox_1 );
     gtk_widget_hide( listbox_Databox_2 );
-    gtk_widget_hide( label_Databox_box1 );
-    gtk_widget_hide( label_Databox_box2 );
-    gtk_widget_hide( scale_shipments );
+    gtk_widget_hide( listbox_Databox_3 );
+    gtk_widget_hide( label1_Databox_vbox2_1 );
+    gtk_widget_hide( label1_Databox_vbox2_2 );
+    gtk_widget_hide( scale_Databox_shipments );
     gtk_widget_hide( btn_Databox_save_shipments_num );
 }
 void go_state0( void )
@@ -126,24 +127,24 @@ void go_state2 ( void )
     gtk_widget_hide( window );
     gtk_widget_show_all( Databox_window );
     hideDataboxAll();
-    gtk_label_set_text( label_Databox_Main, "הוספת משפחה");
-    gtk_label_set_text( label_Databox_1, "שם משפחה");
-    gtk_label_set_text( label_Databox_2, "שמות פרטיים");
-    gtk_label_set_text( label_Databox_box2, "רשימת השכונות" );
+    gtk_label_set_text( label1_Databox_hbox1, "הוספת משפחה");
+    gtk_label_set_text( label1_Databox_hbox2_3_1, "שם משפחה");
+    gtk_label_set_text( label1_Databox_hbox2_3_2, "שמות פרטיים");
+    gtk_label_set_text( label1_Databox_vbox2_2, "רשימת השכונות" );
     gtk_entry_set_text( entry_Databox_1, "" );
     gtk_entry_set_text( entry_Databox_2, "" );
     gtk_widget_show ( Databox_window );
-    gtk_widget_show ( label_Databox_Main );
+    gtk_widget_show ( label1_Databox_hbox1 );
     gtk_widget_show( entry_Databox_1 );
-    gtk_widget_show( label_Databox_1 );
+    gtk_widget_show( label1_Databox_hbox2_3_1 );
     gtk_widget_show( entry_Databox_2 );
-    gtk_widget_show( label_Databox_2 );
+    gtk_widget_show( label1_Databox_hbox2_3_2 );
     gtk_widget_show( chkbtn_Databox );
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chkbtn_Databox), FALSE);
     gtk_widget_show( btn_Databox_add_family );
     gtk_widget_show( btn_Databox_quit );
     gtk_widget_show( listbox_Databox_2 );
-    gtk_widget_show( label_Databox_box2 );
+    gtk_widget_show( label1_Databox_vbox2_2 );
 }
 
 void go_state3 ( void )
@@ -153,13 +154,13 @@ void go_state3 ( void )
     gtk_widget_hide( window );
     gtk_widget_show_all( Databox_window );
     hideDataboxAll();
-    gtk_label_set_text( label_Databox_Main, "הסרת משפחה");
-    gtk_label_set_text( label_Databox_box2, "רשימת התושבים" );
-    gtk_widget_show ( label_Databox_Main );
+    gtk_label_set_text( label1_Databox_hbox1, "הסרת משפחה");
+    gtk_label_set_text( label1_Databox_vbox2_2, "רשימת התושבים" );
+    gtk_widget_show ( label1_Databox_hbox1 );
     gtk_widget_show( btn_Databox_del_family );
     gtk_widget_show( btn_Databox_quit );
     gtk_widget_show( listbox_Databox_2 );
-    gtk_widget_show( label_Databox_box2 );
+    gtk_widget_show( label1_Databox_vbox2_2 );
 }
 
 void go_state4 ( void )
@@ -169,18 +170,18 @@ void go_state4 ( void )
     gtk_widget_hide( window );
     gtk_widget_show_all( Databox_window );
     hideDataboxAll();
-    gtk_label_set_text( label_Databox_Main, "הוספת קבוצה");
-    gtk_label_set_text( label_Databox_1, "שם הקבוצה החדשה");
-    gtk_label_set_text( label_Databox_box2, "רשימת השכונות" );
+    gtk_label_set_text( label1_Databox_hbox1, "הוספת קבוצה");
+    gtk_label_set_text( label1_Databox_hbox2_3_1, "שם הקבוצה החדשה");
+    gtk_label_set_text( label1_Databox_vbox2_2, "רשימת השכונות" );
     gtk_entry_set_text( entry_Databox_1, "" );
     gtk_widget_show ( Databox_window );
-    gtk_widget_show ( label_Databox_Main );
+    gtk_widget_show ( label1_Databox_hbox1 );
     gtk_widget_show( entry_Databox_1 );
-    gtk_widget_show( label_Databox_1 );
+    gtk_widget_show( label1_Databox_hbox2_3_1 );
     gtk_widget_show( btn_Databox_add_group );
     gtk_widget_show( btn_Databox_quit );
     gtk_widget_show( listbox_Databox_2 );
-    gtk_widget_show( label_Databox_box2 );
+    gtk_widget_show( label1_Databox_vbox2_2 );
 }
 
 void go_state5 ( void )
@@ -190,17 +191,17 @@ void go_state5 ( void )
     gtk_widget_hide( window );
     gtk_widget_show_all( Databox_window );
     hideDataboxAll();
-    gtk_label_set_text( label_Databox_Main, "הסרת קבוצה");
-    gtk_label_set_text( label_Databox_box1, "הקבוצה אליה יעברו התושבים שהיו בקבוצה שנמחקה");
-    gtk_label_set_text( label_Databox_box2, "רשימת השכונות" );
+    gtk_label_set_text( label1_Databox_hbox1, "הסרת קבוצה");
+    gtk_label_set_text( label1_Databox_vbox2_1, "הקבוצה אליה יעברו התושבים שהיו בקבוצה שנמחקה");
+    gtk_label_set_text( label1_Databox_vbox2_2, "רשימת השכונות" );
     gtk_widget_show ( Databox_window );
-    gtk_widget_show ( label_Databox_Main );
+    gtk_widget_show ( label1_Databox_hbox1 );
     gtk_widget_show( btn_Databox_del_group );
     gtk_widget_show( btn_Databox_quit );
     gtk_widget_show( listbox_Databox_1 );
     gtk_widget_show( listbox_Databox_2 );
-    gtk_widget_show( label_Databox_box1 );
-    gtk_widget_show( label_Databox_box2 );
+    gtk_widget_show( label1_Databox_vbox2_1 );
+    gtk_widget_show( label1_Databox_vbox2_2 );
 }
 
 void go_state6 ( void )
@@ -210,12 +211,12 @@ void go_state6 ( void )
     gtk_widget_hide( window );
     gtk_widget_show_all( Databox_window );
     hideDataboxAll();
-    gtk_label_set_text( label_Databox_Main, "מספר משלוחים");
+    gtk_label_set_text( label1_Databox_hbox1, "מספר משלוחים");
     gtk_widget_show ( Databox_window );
-    gtk_widget_show ( label_Databox_Main );
+    gtk_widget_show ( label1_Databox_hbox1 );
     gtk_widget_show( btn_Databox_save_shipments_num );
     gtk_widget_show( btn_Databox_quit );
-    gtk_widget_show( scale_shipments );
+    gtk_widget_show( scale_Databox_shipments );
 }
 
 void go_state7 ( void )
@@ -225,19 +226,19 @@ void go_state7 ( void )
     gtk_widget_hide( window );
     gtk_widget_show_all( Databox_window );
     hideDataboxAll();
-    gtk_label_set_text( label_Databox_Main, "שינוי פרטי משפחה");
-    gtk_label_set_text( label_Databox_box1, "רשימת השכונות");
-    gtk_label_set_text( label_Databox_box2, "רשימת המשפחות" );
+    gtk_label_set_text( label1_Databox_hbox1, "שינוי פרטי משפחה");
+    gtk_label_set_text( label1_Databox_vbox2_1, "רשימת השכונות");
+    gtk_label_set_text( label1_Databox_vbox2_2, "רשימת המשפחות" );
     gtk_widget_show ( Databox_window );
-    gtk_widget_show ( label_Databox_Main );
+    gtk_widget_show ( label1_Databox_hbox1 );
     gtk_widget_show( btn_Databox_save_changes );
     gtk_widget_show( btn_Databox_quit );
     gtk_widget_show( chkbtn_Databox );
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chkbtn_Databox), FALSE);
     gtk_widget_show( listbox_Databox_1 );
     gtk_widget_show( listbox_Databox_2 );
-    gtk_widget_show( label_Databox_box1 );
-    gtk_widget_show( label_Databox_box2 );
+    gtk_widget_show( label1_Databox_vbox2_1 );
+    gtk_widget_show( label1_Databox_vbox2_2 );
 }
 
 void go_state8 ( void )
@@ -247,16 +248,17 @@ void go_state8 ( void )
     gtk_widget_hide( window );
     gtk_widget_show_all( Databox_window );
     hideDataboxAll();
-    gtk_label_set_text( label_Databox_Main, "משלוחים נוספים");
-    gtk_label_set_text( label_Databox_box1, "מקבלי משלוח נוסף");
-    gtk_label_set_text( label_Databox_box2, "רשימת המשפחות הפטורות" );
-    gtk_label_set_text( label_Databox_box3, "רשימת המשפחות הנותנות" );
+    gtk_label_set_text( label1_Databox_hbox1, "משלוחים נוספים");
+    gtk_label_set_text( label1_Databox_vbox2_1, "מקבלי משלוח נוסף");
+    gtk_label_set_text( label1_Databox_vbox2_2, "רשימת המשפחות הפטורות" );
+    gtk_label_set_text( label1_Databox_vbox2_3, "רשימת המשפחות הנותנות" );
     gtk_widget_show ( Databox_window );
-    gtk_widget_show ( label_Databox_Main );
+    gtk_widget_show ( label1_Databox_hbox1 );
     gtk_widget_show( btn_Databox_save_changes );
     gtk_widget_show( btn_Databox_quit );
     gtk_widget_show( listbox_Databox_1 );
     gtk_widget_show( listbox_Databox_2 );
-    gtk_widget_show( label_Databox_box1 );
-    gtk_widget_show( label_Databox_box2 );
+    gtk_widget_show( listbox_Databox_3 );
+    gtk_widget_show( label1_Databox_vbox2_1 );
+    gtk_widget_show( label1_Databox_vbox2_2 );
 }
