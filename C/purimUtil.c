@@ -85,6 +85,8 @@ void hideDataboxAll( void )
     gtk_widget_hide( btn_Databox_add_group );
     gtk_widget_hide( btn_Databox_del_group );
     gtk_widget_hide( btn_Databox_quit );
+    gtk_widget_hide( btn_Databox_add_to_list );
+    gtk_widget_hide( btn_Databox_remove_from_list );
     gtk_widget_hide( listbox_Databox_1 );
     gtk_widget_hide( listbox_Databox_2 );
     gtk_widget_hide( listbox_Databox_3 );
@@ -256,6 +258,8 @@ void go_state8 ( void )
     gtk_widget_show ( label1_Databox_hbox1 );
     gtk_widget_show( btn_Databox_save_changes );
     gtk_widget_show( btn_Databox_quit );
+    gtk_widget_show( btn_Databox_add_to_list );
+    gtk_widget_show( btn_Databox_remove_from_list );
     gtk_widget_show( listbox_Databox_1 );
     gtk_widget_show( listbox_Databox_2 );
     gtk_widget_show( listbox_Databox_3 );

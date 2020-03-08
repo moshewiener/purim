@@ -324,6 +324,38 @@ int DB_get_extra_shipment( unsigned long personNum, int shipmentIndex )
     return p_person_records[personNum].extra[shipmentIndex];
 }
 
+/*******************************************/
+gboolean DB_add_extra_shipment( unsigned long personNum, unsigned long receiver )
+{
+    int extrashipments;
+    if (p_person_records == NULL) return FALSE;
+    if (personNum > db_persons_count) return FALSE;
+    if (receiver > db_persons_count) return FALSE;
+    extrashipments = p_person_records[personNum].extrashipments;
+    if (extrashipments >= MAX_EXTRA_SHIPMENTS) return FALSE;
+    
+    p_person_records[personNum].extra[extrashipments] = receiver;
+    p_person_records[personNum].extrashipments++;
+    return TRUE;
+}
+
+/*******************************************/
+gboolean DB_del_extra_shipment( unsigned long personNum, int shipmentIndex )
+{
+    int extrashipments, index;
+    if (p_person_records == NULL) return FALSE;
+    if (personNum > db_persons_count) return FALSE;
+    if (shipmentIndex > db_persons_count) return FALSE;
+    extrashipments = p_person_records[personNum].extrashipments;
+    if (shipmentIndex >= extrashipments) return FALSE;
+    
+    for (index = shipmentIndex+1; index < extrashipments; index++)
+        p_person_records[personNum].extra[index-1] = p_person_records[personNum].extra[index];
+    p_person_records[personNum].extra[index-1] = (-1);
+    p_person_records[personNum].extrashipments--;
+    return TRUE;
+}
+
 /**************************************************/
 void DB_debug_print_record( unsigned long personNum)
 {

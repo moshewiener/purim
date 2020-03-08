@@ -265,7 +265,7 @@ void CALC_debug_print_shipments( void )
    
    if (giversNum <= 1)
    {
-       g_print("Too few givers. (%d)\n", givers);
+       g_print("Too few givers. (%d)\n", giversNum);
        return;
    }
    g_print("Sending table\n=============\n");

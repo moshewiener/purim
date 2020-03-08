@@ -31,6 +31,7 @@ extern GtkWidget* window, *list_box;
 /* Databox widgets */
 extern GtkWidget *btn_Databox_add_family, *btn_Databox_del_family, *btn_Databox_save_changes, *btn_Databox_quit;
 extern GtkWidget *btn_Databox_add_group, *btn_Databox_del_group, *btn_Databox_save_shipments_num;
+extern GtkWidget *btn_Databox_add_to_list, *btn_Databox_remove_from_list;
 extern GtkWidget *Databox_window, *label1_Databox_hbox1, *label1_Databox_vbox2_1, *label1_Databox_vbox2_2, *label1_Databox_vbox2_3;
 extern GtkWidget *label1_Databox_hbox2_3_1, *label1_Databox_hbox2_3_2;
 extern GtkListBox *listbox_Databox_1, *listbox_Databox_2, *listbox_Databox_3;
@@ -41,7 +42,8 @@ int my_atoi( char *strNum );
 void pointerssort(void **array, size_t nitems, size_t size, int (*compar)(const void *, const void*));
 GtkWidget *create_listbox_in_scrollwin( GtkWidget **p_list_box,
                                         gint entriesNum, String32 *names,
-                                        GCallback row_selected_cb_function );
+                                        GCallback row_selected_cb_function,
+                                        void *user_data );
 void remove_all_rows_of_listbox( GtkWidget *listbox );
 void fill_listbox_with_persons( GtkWidget *listBox );
 
@@ -78,6 +80,8 @@ gboolean DB_is_free( unsigned long personNum );
 gboolean DB_set_free( unsigned long personNum, gboolean nonSender);
 int DB_get_extra_shipments_num( unsigned long personNum );
 int DB_get_extra_shipment( unsigned long personNum, int shipmentIndex );
+gboolean DB_add_extra_shipment( unsigned long personNum, unsigned long receiver );
+gboolean DB_del_extra_shipment( unsigned long personNum, int shipmentIndex );
 gboolean DB_add_family(char *firstname, char *surname, gboolean nonSender, int groupnum);
 gboolean DB_del_family( unsigned long personNum );
 long DB_find_family(char *firstname, char *surname);

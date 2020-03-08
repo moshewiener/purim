@@ -430,7 +430,8 @@ static GtkWidget *create_frame_with_buttons( gint  horizontal,
 /****************************************************************************/
 GtkWidget *create_listbox_in_scrollwin( GtkWidget **p_list_box,
                                         gint entriesNum, String32 *names,
-                                        GCallback row_selected_cb_function )
+                                        GCallback row_selected_cb_function,
+                                        void *user_data )
 {
     GtkWidget *bbox;
     GtkWidget *row;
@@ -466,7 +467,7 @@ GtkWidget *create_listbox_in_scrollwin( GtkWidget **p_list_box,
     } 
 
     if (row_selected_cb_function != NULL)
-        g_signal_connect (*p_list_box, "row-selected", row_selected_cb_function, NULL);
+        g_signal_connect (*p_list_box, "row-selected", row_selected_cb_function, user_data);
     
     return scrollwindow;
 }
@@ -642,7 +643,7 @@ int main( int argc, char *argv[] )
     gtk_box_pack_start (GTK_BOX (main_hbox), frame_vert, TRUE, TRUE, 10);
     
     // Create the 2nd frame and add it to the main container
-    scrollwin = create_listbox_in_scrollwin( &list_box, 0, NULL, (GCallback) row_selected_callback );
+    scrollwin = create_listbox_in_scrollwin( &list_box, 0, NULL, (GCallback) row_selected_callback, NULL );
     gtk_list_box_set_sort_func( list_box, listBoxSortRows, NULL, NULL);
     frame_listbox = gtk_frame_new("רשימת משפחות");
     gtk_frame_set_label_align( frame_listbox, 0.5, 1.0);
