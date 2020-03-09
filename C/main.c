@@ -510,7 +510,9 @@ void fill_listbox_with_persons( GtkWidget *listBox )
     GtkWidget *row, *rowLabel;
     
     persons = DB_get_persons_num();
+#ifdef DEBUG
     g_print("persons=%d\n", persons);
+#endif
     for (index = 0; index < persons; index++)
     {
         firstname = DB_get_firstname( index );

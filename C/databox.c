@@ -26,6 +26,8 @@ static void fill_listboxes_for_req_extra( void );
 static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gint *p_req);
 static void callback_databox_add_family_button_clicked (GtkWidget *widget, gint windowId);
 static void callback_databox_save_changes_button_clicked(GtkWidget *widget, gint *p_req);
+static void callback_databox_add_extra_button_clicked(GtkWidget *widget, gint *user_data);
+static void callback_databox_del_extra_button_clicked(GtkWidget *widget, gint *user_data);
 
 /*** CALLBACK functions ***/
 void  callback_databox_window_destroy (GtkWidget *widget, gint wiunId)
@@ -119,6 +121,8 @@ static void callback_databox_save_changes_button_clicked (GtkWidget *widget, gin
     int groupNum;
     gboolean isFree;
     GtkWidget *row;
+    unsigned long giverIndex;
+    int extraNum, extraIndex;
   
     if ( *p_req == DATABOX_REQ_CHGFAMILY )
     { /* Save Button was clicked when handling Change Family request. */
@@ -136,8 +140,28 @@ static void callback_databox_save_changes_button_clicked (GtkWidget *widget, gin
     }
     else if (*p_req == DATABOX_REQ_EXTRA)
     { /* Save Button was clicked when handling Extra Shipments request. */
-        // Find out how many receivers exist currewntly (by nonGivers_list entries bigger than -1
-        // and add the selected receiver to both nonGivers_list and listbox_Databox_1
+        // Find out how many receivers exist currently (by extra_shipments entries bigger than -1).
+        // Remove all extra shipments of this giver from the DataBase and add the new extra shipments
+        // one by one from extra_shipments list to the DataBase.
+        
+        giverIndex = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_3) );
+        personNum = givers_list[giverIndex];
+        // get old extra shipments from DB
+        extraNum = DB_get_extra_shipments_num;
+        // erase all extra shipments of this person in DB
+        for (extraIndex = 0; extraIndex < extraNum; extraIndex++)
+            DB_del_extra_shipment( personNum, 0 );
+        // find out new numer of extra shipments of this person
+        for (extraNum=0; extraNum < MAX_EXTRA_SHIPMENTS; extraNum++)
+            if (extra_shipments[extraNum] < 0) break;
+        // Add the new extra shipments of this person to DB
+        for (extraIndex=0; extraIndex < extraNum; extraIndex++)
+        {
+            DB_add_extra_shipment( personNum, extra_shipments[extraIndex] );
+        }
+        gtk_widget_hide ( Databox_window );
+        gtk_widget_show_all( window );
+        go_state1();
     }
 }
 
@@ -234,7 +258,7 @@ void callback_databox_shipments_num_button_clicked(GtkWidget *widget, gint windo
 }
 
 /********************************************************/
-void callback_databox_add_extra_button_clicked(GtkWidget *widget, gint *user_data)
+static void callback_databox_add_extra_button_clicked(GtkWidget *widget, gint *user_data)
 {
     // Find out how many receivers exist currewntly (by nonGivers_list entries bigger than -1)
     // and add the selected receiver to both extra_shipments array and listbox_Databox_1
@@ -270,11 +294,39 @@ void callback_databox_add_extra_button_clicked(GtkWidget *widget, gint *user_dat
         }
         gtk_widget_show_all( listbox_Databox_1 );
     }
+    // Not closing the  databox window after this button was pressed.
+}
+
+/********************************************************/
+static void callback_databox_del_extra_button_clicked(GtkWidget *widget, gint *user_data)
+{
+    GtkWidget *extralist_row;
+    int extraNum, removedExtraIndex, index;
     
-    //DB_add_extra_shipment( giverNum, receiver );
-    //gtk_widget_hide ( Databox_window );
-    //gtk_widget_show_all( window );
-    //go_state1();
+    extralist_row = gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_1);
+    if (extralist_row == NULL) return;
+    removedExtraIndex = gtk_list_box_row_get_index( extralist_row );
+    if ((removedExtraIndex < 0) || (removedExtraIndex >= MAX_EXTRA_SHIPMENTS)) return;
+    
+    // find out how many extra shipments this person had
+    for (extraNum=0; extraNum < MAX_EXTRA_SHIPMENTS; extraNum++)
+    {
+        if (extra_shipments[extraNum] < 0) break;
+    }
+    if (extraNum < 1) return;
+        
+    //remove entry from extra_shipments list
+    for (index = removedExtraIndex; index < MAX_EXTRA_SHIPMENTS; index++)
+    {
+        if (index < (extraNum-1)) extra_shipments[index] = extra_shipments[index + 1];
+        else extra_shipments[index] = (-1);
+    }
+    
+    // remove the row from the listbox
+    gtk_widget_destroy(extralist_row);
+    gtk_widget_show_all( listbox_Databox_1 );
+    
+    // Not closing the  databox window after this button was pressed.
 }
 
 /********************************************************/
@@ -720,6 +772,8 @@ gboolean create_databox_window( char *title )
                           G_CALLBACK (callback_databox_shipments_num_button_clicked), 2);
         g_signal_connect (G_OBJECT (btn_Databox_add_to_list), "clicked", 
                           G_CALLBACK (callback_databox_add_extra_button_clicked), NULL);
+        g_signal_connect (G_OBJECT (btn_Databox_remove_from_list), "clicked", 
+                          G_CALLBACK (callback_databox_del_extra_button_clicked), NULL);
 
         //gtk_widget_show_all( Databox_window );
     return TRUE;
