@@ -136,6 +136,8 @@ static void callback_databox_save_changes_button_clicked (GtkWidget *widget, gin
     }
     else if (*p_req == DATABOX_REQ_EXTRA)
     { /* Save Button was clicked when handling Extra Shipments request. */
+        // Find out how many receivers exist currewntly (by nonGivers_list entries bigger than -1
+        // and add the selected receiver to both nonGivers_list and listbox_Databox_1
     }
 }
 
@@ -234,16 +236,45 @@ void callback_databox_shipments_num_button_clicked(GtkWidget *widget, gint windo
 /********************************************************/
 void callback_databox_add_extra_button_clicked(GtkWidget *widget, gint *user_data)
 {
+    // Find out how many receivers exist currewntly (by nonGivers_list entries bigger than -1)
+    // and add the selected receiver to both extra_shipments array and listbox_Databox_1
+    
     unsigned long giverNum, receiver, giverIndex, receiverIndex;
+    char *firstname, *surname;
+    char familyname[96];
+    GtkWidget *extralist_row, *label;
+    int extraNum;
     
     giverIndex = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_3) );
     giverNum = givers_list[giverIndex];
     receiverIndex = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_2) );
-    receiver = nonGivers_list[receiverIndex];    
-    DB_add_extra_shipment( giverNum, receiver );
-    gtk_widget_hide ( Databox_window );
-    gtk_widget_show_all( window );
-    go_state1();
+    receiver = nonGivers_list[receiverIndex];
+    for (extraNum=0; extraNum < MAX_EXTRA_SHIPMENTS; extraNum++)
+    {
+        if (extra_shipments[extraNum] < 0) break;
+    }
+    
+    if (extraNum < MAX_EXTRA_SHIPMENTS)
+    {
+        extra_shipments[extraNum] = receiver;
+        firstname = DB_get_firstname( receiver );
+        surname = DB_get_surname( receiver );
+        if ((firstname != NULL) && (surname != NULL))
+        {
+            sprintf(familyname, "%s %s", surname, firstname);
+            extralist_row = gtk_list_box_row_new();
+            label = gtk_label_new( familyname );
+            gtk_label_set_xalign( label, 1.0); // right alignment
+            gtk_container_add (GTK_CONTAINER (extralist_row), label);
+            gtk_container_add (GTK_CONTAINER (listbox_Databox_1), extralist_row);
+        }
+        gtk_widget_show_all( listbox_Databox_1 );
+    }
+    
+    //DB_add_extra_shipment( giverNum, receiver );
+    //gtk_widget_hide ( Databox_window );
+    //gtk_widget_show_all( window );
+    //go_state1();
 }
 
 /********************************************************/
@@ -299,7 +330,7 @@ static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gint *p_
             {
                 if (extraIndex < extraShipmentsNum)
                 {
-                    receiver = DB_get_extra_shipment( personNum, extraIndex );;
+                    receiver = DB_get_extra_shipment( personNum, extraIndex );
                     extra_shipments[extraIndex] = receiver;
                     firstname = DB_get_firstname( receiver );
                     surname = DB_get_surname( receiver );
