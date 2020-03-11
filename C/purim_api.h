@@ -42,8 +42,7 @@ int my_atoi( char *strNum );
 void pointerssort(void **array, size_t nitems, size_t size, int (*compar)(const void *, const void*));
 GtkWidget *create_listbox_in_scrollwin( GtkWidget **p_list_box,
                                         gint entriesNum, String32 *names,
-                                        GCallback row_selected_cb_function,
-                                        void *user_data );
+                                        GCallback row_selected_cb_function );
 void remove_all_rows_of_listbox( GtkWidget *listbox );
 void fill_listbox_with_persons( GtkWidget *listBox );
 

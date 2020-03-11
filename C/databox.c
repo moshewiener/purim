@@ -14,20 +14,12 @@ GtkWidget *label1_Databox_hbox2_3_1, *label1_Databox_hbox2_3_2;
 GtkListBox *listbox_Databox_1, *listbox_Databox_2, *listbox_Databox_3;
 GtkWidget *scale_Databox_shipments, *chkbtn_Databox;
 
-/* static variables */
 static databoxreq request;
-static unsigned long *givers_list = NULL;
-static unsigned long *nonGivers_list = NULL;
-static long extra_shipments[MAX_EXTRA_SHIPMENTS];
-
-static void callback_destroy_row (GtkWidget *row, GtkWidget *listbox);
+static void callback_destroy_row (GtkWidget *row, gpointer data);
 static gint listBoxSortRows (GtkListBoxRow *row1, GtkListBoxRow *row2, gpointer user_data);
-static void fill_listboxes_for_req_extra( void );
-static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gint *p_req);
+static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer user_data);
 static void callback_databox_add_family_button_clicked (GtkWidget *widget, gint windowId);
 static void callback_databox_save_changes_button_clicked(GtkWidget *widget, gint *p_req);
-static void callback_databox_add_extra_button_clicked(GtkWidget *widget, gint *user_data);
-static void callback_databox_del_extra_button_clicked(GtkWidget *widget, gint *user_data);
 
 /*** CALLBACK functions ***/
 void  callback_databox_window_destroy (GtkWidget *widget, gint wiunId)
@@ -42,8 +34,6 @@ void  callback_databox_window_destroy (GtkWidget *widget, gint wiunId)
     gtk_widget_hide ( Databox_window );
     gtk_entry_set_text( entry_Databox_1, "" );
     gtk_entry_set_text( entry_Databox_2, "" );
-    if (givers_list != NULL) { free(givers_list); givers_list = NULL; }
-    if (nonGivers_list != NULL) { free(nonGivers_list); nonGivers_list = NULL; }
     go_state1();
 }
 /***********************************************************/
@@ -121,8 +111,6 @@ static void callback_databox_save_changes_button_clicked (GtkWidget *widget, gin
     int groupNum;
     gboolean isFree;
     GtkWidget *row;
-    unsigned long giverIndex;
-    int extraNum, extraIndex;
   
     if ( *p_req == DATABOX_REQ_CHGFAMILY )
     { /* Save Button was clicked when handling Change Family request. */
@@ -140,28 +128,6 @@ static void callback_databox_save_changes_button_clicked (GtkWidget *widget, gin
     }
     else if (*p_req == DATABOX_REQ_EXTRA)
     { /* Save Button was clicked when handling Extra Shipments request. */
-        // Find out how many receivers exist currently (by extra_shipments entries bigger than -1).
-        // Remove all extra shipments of this giver from the DataBase and add the new extra shipments
-        // one by one from extra_shipments list to the DataBase.
-        
-        giverIndex = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_3) );
-        personNum = givers_list[giverIndex];
-        // get old extra shipments from DB
-        extraNum = DB_get_extra_shipments_num;
-        // erase all extra shipments of this person in DB
-        for (extraIndex = 0; extraIndex < extraNum; extraIndex++)
-            DB_del_extra_shipment( personNum, 0 );
-        // find out new numer of extra shipments of this person
-        for (extraNum=0; extraNum < MAX_EXTRA_SHIPMENTS; extraNum++)
-            if (extra_shipments[extraNum] < 0) break;
-        // Add the new extra shipments of this person to DB
-        for (extraIndex=0; extraIndex < extraNum; extraIndex++)
-        {
-            DB_add_extra_shipment( personNum, extra_shipments[extraIndex] );
-        }
-        gtk_widget_hide ( Databox_window );
-        gtk_widget_show_all( window );
-        go_state1();
     }
 }
 
@@ -176,14 +142,14 @@ void callback_databox_del_family_button_clicked (GtkWidget *widget, gint windowI
     g_print("Deleting family #%d\n", personNum);
     DB_del_family( personNum );
     gtk_widget_hide ( Databox_window );
+    gtk_widget_show_all( window );
     
     // remove row from list_box
     row = gtk_list_box_get_row_at_index( list_box, personNum );
     if (row != NULL)
         gtk_widget_destroy(row);
     
-    //refresh same state
-    go_state3();
+    go_state1();
 }
 
 /***********************************************************/
@@ -256,158 +222,38 @@ void callback_databox_shipments_num_button_clicked(GtkWidget *widget, gint windo
     gtk_widget_show_all( window );
     go_state1();
 }
-
 /********************************************************/
-static void callback_databox_add_extra_button_clicked(GtkWidget *widget, gint *user_data)
+static void callback_destroy_row (GtkWidget *row, gpointer data)
 {
-    // Find out how many receivers exist currewntly (by nonGivers_list entries bigger than -1)
-    // and add the selected receiver to both extra_shipments array and listbox_Databox_1
-    
-    unsigned long giverNum, receiver, giverIndex, receiverIndex;
-    char *firstname, *surname;
-    char familyname[96];
-    GtkWidget *extralist_row, *label;
-    int extraNum;
-    
-    giverIndex = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_3) );
-    giverNum = givers_list[giverIndex];
-    receiverIndex = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_2) );
-    receiver = nonGivers_list[receiverIndex];
-    for (extraNum=0; extraNum < MAX_EXTRA_SHIPMENTS; extraNum++)
-    {
-        if (extra_shipments[extraNum] < 0) break;
-    }
-    
-    if (extraNum < MAX_EXTRA_SHIPMENTS)
-    {
-        extra_shipments[extraNum] = receiver;
-        firstname = DB_get_firstname( receiver );
-        surname = DB_get_surname( receiver );
-        if ((firstname != NULL) && (surname != NULL))
-        {
-            sprintf(familyname, "%s %s", surname, firstname);
-            extralist_row = gtk_list_box_row_new();
-            label = gtk_label_new( familyname );
-            gtk_label_set_xalign( label, 1.0); // right alignment
-            gtk_container_add (GTK_CONTAINER (extralist_row), label);
-            gtk_container_add (GTK_CONTAINER (listbox_Databox_1), extralist_row);
-        }
-        gtk_widget_show_all( listbox_Databox_1 );
-    }
-    // Not closing the  databox window after this button was pressed.
-}
-
-/********************************************************/
-static void callback_databox_del_extra_button_clicked(GtkWidget *widget, gint *user_data)
-{
-    GtkWidget *extralist_row;
-    int extraNum, removedExtraIndex, index;
-    
-    extralist_row = gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_1);
-    if (extralist_row == NULL) return;
-    removedExtraIndex = gtk_list_box_row_get_index( extralist_row );
-    if ((removedExtraIndex < 0) || (removedExtraIndex >= MAX_EXTRA_SHIPMENTS)) return;
-    
-    // find out how many extra shipments this person had
-    for (extraNum=0; extraNum < MAX_EXTRA_SHIPMENTS; extraNum++)
-    {
-        if (extra_shipments[extraNum] < 0) break;
-    }
-    if (extraNum < 1) return;
-        
-    //remove entry from extra_shipments list
-    for (index = removedExtraIndex; index < MAX_EXTRA_SHIPMENTS; index++)
-    {
-        if (index < (extraNum-1)) extra_shipments[index] = extra_shipments[index + 1];
-        else extra_shipments[index] = (-1);
-    }
-    
-    // remove the row from the listbox
-    gtk_widget_destroy(extralist_row);
-    gtk_widget_show_all( listbox_Databox_1 );
-    
-    // Not closing the  databox window after this button was pressed.
-}
-
-/********************************************************/
-static void callback_destroy_row (GtkWidget *row, GtkWidget *list_box)
-{
-    if (gtk_list_box_row_get_index(row) >= 0)
-    {
-#if 1    
-        gtk_widget_destroy(row);
-#else
-        gtk_container_remove( list_box, row );
-#endif
-    }
+    gtk_widget_destroy(row);
 }
 
 /**********************************************************/
-static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gint *p_req)
+static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
 {
     gboolean isFree;
     int groupNum;
-    unsigned long personNum, persons, receiver;
-    int extraShipmentsNum, extraIndex;
-    char *firstname, *surname;
-    GtkWidget *extralist_row, *label;
-    char familyname[96];
+    unsigned long personNum, persons;
     
     if (row == NULL) return;
-    if (p_req == NULL) return;
-    if (box == listbox_Databox_2)
+    if (box == listbox_Databox_1)
     {
-        if (*p_req == DATABOX_REQ_CHGFAMILY)
-        {
-            persons = DB_get_persons_num();
-            personNum = gtk_list_box_row_get_index(row);
-            if (personNum >= persons) return;
-            groupNum = groupNum = DB_get_person_groupnumber( personNum );
-            isFree = DB_is_free( personNum );
-            /* set the group of 1st person in the groups listbox */
-            gtk_list_box_select_row (listbox_Databox_1, gtk_list_box_get_row_at_index( listbox_Databox_1 , groupNum ));
-            gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chkbtn_Databox), isFree);
-        } 
+        persons = DB_get_persons_num();
+        personNum = gtk_list_box_row_get_index(row);
+        if (personNum >= persons) return;
+        groupNum = groupNum = DB_get_person_groupnumber( personNum );
+        isFree = DB_is_free( personNum );
+        /* set the group of 1st person in the groups listbox */
+        gtk_list_box_select_row (listbox_Databox_1, gtk_list_box_get_row_at_index( listbox_Databox_1 , groupNum ));
+        gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (chkbtn_Databox), isFree);
     }
-    else if (box == listbox_Databox_3)
-    {
-        if (*p_req == DATABOX_REQ_EXTRA)
-        {
-            remove_all_rows_of_listbox( listbox_Databox_1 );
-            persons = DB_get_persons_num();
-            personNum = givers_list[gtk_list_box_row_get_index(row)];
-            if (personNum >= persons) return;
-            extraShipmentsNum = DB_get_extra_shipments_num( personNum );
-            for (extraIndex=0; extraIndex < MAX_EXTRA_SHIPMENTS; extraIndex++)
-            {
-                if (extraIndex < extraShipmentsNum)
-                {
-                    receiver = DB_get_extra_shipment( personNum, extraIndex );
-                    extra_shipments[extraIndex] = receiver;
-                    firstname = DB_get_firstname( receiver );
-                    surname = DB_get_surname( receiver );
-                    if ((firstname != NULL) && (surname != NULL))
-                    {
-                        sprintf(familyname, "%s %s", surname, firstname);
-                        extralist_row = gtk_list_box_row_new();
-                        label = gtk_label_new( familyname );
-                        gtk_label_set_xalign( label, 1.0); // right alignment
-                        gtk_container_add (GTK_CONTAINER (extralist_row), label);
-                        gtk_container_add (GTK_CONTAINER (listbox_Databox_1), extralist_row);
-                    }
-                }
-                else extra_shipments[extraIndex] = (-1);
-            }
-            gtk_widget_show_all( listbox_Databox_1 );
-        } // DATABOX_REQ_EXTRA
-    } // listbox_Databox_3
 }
 
 /**********************************************************/
 void remove_all_rows_of_listbox( GtkWidget *listbox )
 {
     if (GTK_IS_CONTAINER( listbox ) != TRUE) return;
-    gtk_container_foreach( (GtkContainer *)listbox, callback_destroy_row, listbox);
+    gtk_container_foreach( (GtkContainer *)listbox, callback_destroy_row, NULL);
 }
 
 /*****************************************/
@@ -426,7 +272,6 @@ void databox_request_service( databoxreq req )
     if (Databox_window == NULL) create_databox_window( title );
     remove_all_rows_of_listbox( listbox_Databox_1 );
     remove_all_rows_of_listbox( listbox_Databox_2 );
-    remove_all_rows_of_listbox( listbox_Databox_3 );
     if (request == DATABOX_REQ_ADDFAMILY)
     {
         /* add group names to listbox */
@@ -538,76 +383,17 @@ void databox_request_service( databoxreq req )
         shipments = DB_get_shipments_num();
         gtk_range_set_value ( scale_Databox_shipments, shipments);
     }
-    else if (request == DATABOX_REQ_EXTRA)
-    {
-        fill_listboxes_for_req_extra();
-    }
-}
-
-/********************************************************/
-static void fill_listboxes_for_req_extra( void )
-{
-    unsigned long personsNumber, giversNumber, personIndex, giverIndex;
-    unsigned long nonGiversNum, nonGiverIndex;
-    char *firstname, *surname;
-    char familyname[96];
-    GtkWidget *row, *label;
-    
-    if (givers_list != NULL) { free(givers_list); givers_list=NULL; }
-    if (nonGivers_list != NULL) { free(nonGivers_list); nonGivers_list=NULL; }
-    giversNumber = DB_get_givers_num();
-    personsNumber = DB_get_persons_num();
-    if ((personsNumber < 1) || (giversNumber > personsNumber)) return;
-    
-    nonGiversNum = personsNumber - giversNumber;
-    if (giversNumber > 0) givers_list=malloc(sizeof(unsigned long) * giversNumber);
-    if (nonGiversNum > 0) nonGivers_list=malloc(sizeof(unsigned long) * nonGiversNum);
-    giverIndex = 0;
-    nonGiverIndex = 0;
-    for (personIndex = 0; personIndex < personsNumber; personIndex++)
-    {
-        firstname = DB_get_firstname( personIndex );
-        surname = DB_get_surname( personIndex );
-        if ((firstname != NULL) && (surname != NULL))
-        {
-            sprintf(familyname, "%s %s", surname, firstname);
-            row = gtk_list_box_row_new();
-            label = gtk_label_new( familyname );
-            gtk_label_set_xalign( label, 1.0); // right alignment
-            gtk_container_add (GTK_CONTAINER (row), label);
-            if (DB_is_free(personIndex) == FALSE)
-            { // personIndex is a giver
-                if (giverIndex < giversNumber)
-                    givers_list[giverIndex] = personIndex;
-                gtk_container_add (GTK_CONTAINER (listbox_Databox_3), row);
-                giverIndex++;
-            } // personIndex is a giver
-            else
-            { // personIndex is free of giving
-                if (nonGiverIndex < nonGiversNum)
-                    nonGivers_list[nonGiverIndex] = personIndex;
-                gtk_container_add (GTK_CONTAINER (listbox_Databox_2), row);
-                nonGiverIndex++;
-            } // personIndex is free of giving
-        }
-    }
-    //select the 1st row in givers listbox
-    if (giversNumber > 0)
-        gtk_list_box_select_row (listbox_Databox_3, gtk_list_box_get_row_at_index( listbox_Databox_3 , 0 ));
-    //select the 1st row in non-givers listbox
-    if (nonGiversNum > 0)
-        gtk_list_box_select_row (listbox_Databox_2, gtk_list_box_get_row_at_index( listbox_Databox_2 , 0 ));
 }
 
 /***************************************/
 gboolean create_databox_window( char *title )
 {
-        GtkWidget *labelEmpty;
-        GtkCssProvider *cssBtn;
-        GdkPixbuf *pixbuf;
         GtkWidget *scrollwin, *main_vbox, *hbox1, *hbox2, *hbox3;
         GtkWidget *vbox2_1, *vbox2_2, *vbox2_3;
         GtkWidget *hbox2_3_1, *hbox2_3_2;
+        GtkWidget *labelEmpty;
+        GtkCssProvider *cssBtn;
+        GdkPixbuf *pixbuf;
         
         // Create the widgets
         Databox_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
@@ -735,7 +521,7 @@ gboolean create_databox_window( char *title )
         /* create placeholder label for empty list boxes */
         labelEmpty = gtk_label_new("-- רשימה ריקה --");
         /* create a listbox with no rows */
-        scrollwin = create_listbox_in_scrollwin( &listbox_Databox_1, 0, NULL, NULL, NULL );
+        scrollwin = create_listbox_in_scrollwin( &listbox_Databox_1, 0, NULL, NULL );
         gtk_list_box_set_placeholder (listbox_Databox_1, labelEmpty);
         gtk_widget_set_size_request( scrollwin, 50, 200 );
         gtk_box_pack_start(GTK_BOX(vbox2_1), scrollwin, TRUE, TRUE, 5);
@@ -743,13 +529,13 @@ gboolean create_databox_window( char *title )
         gtk_box_pack_start(GTK_BOX(vbox2_1), btn_Databox_remove_from_list, TRUE, FALSE, 5);
         
         /* create a listbox with no rows */
-        scrollwin = create_listbox_in_scrollwin( &listbox_Databox_2, 0, NULL, (GCallback) row_selected_callback , &request);
+        scrollwin = create_listbox_in_scrollwin( &listbox_Databox_2, 0, NULL, (GCallback) row_selected_callback );
         //gtk_list_box_set_placeholder (listbox_Databox_2, labelEmpty);
         gtk_widget_set_size_request( scrollwin, 50, 200 );
         gtk_box_pack_start(GTK_BOX(vbox2_2), scrollwin, TRUE, TRUE, 5);
         
         /* create a listbox with no rows */
-        scrollwin = create_listbox_in_scrollwin( &listbox_Databox_3, 0, NULL, (GCallback) row_selected_callback, &request );
+        scrollwin = create_listbox_in_scrollwin( &listbox_Databox_3, 0, NULL, (GCallback) row_selected_callback );
         gtk_widget_set_size_request( scrollwin, 50, 200 );
         gtk_box_pack_start(GTK_BOX(vbox2_3), scrollwin, TRUE, TRUE, 5);
 
@@ -770,10 +556,6 @@ gboolean create_databox_window( char *title )
                           G_CALLBACK (callback_databox_del_group_button_clicked), 2);
         g_signal_connect (G_OBJECT (btn_Databox_save_shipments_num), "clicked", 
                           G_CALLBACK (callback_databox_shipments_num_button_clicked), 2);
-        g_signal_connect (G_OBJECT (btn_Databox_add_to_list), "clicked", 
-                          G_CALLBACK (callback_databox_add_extra_button_clicked), NULL);
-        g_signal_connect (G_OBJECT (btn_Databox_remove_from_list), "clicked", 
-                          G_CALLBACK (callback_databox_del_extra_button_clicked), NULL);
 
         //gtk_widget_show_all( Databox_window );
     return TRUE;

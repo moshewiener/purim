@@ -333,9 +333,7 @@ gboolean DB_add_extra_shipment( unsigned long personNum, unsigned long receiver 
     if (receiver > db_persons_count) return FALSE;
     extrashipments = p_person_records[personNum].extrashipments;
     if (extrashipments >= MAX_EXTRA_SHIPMENTS) return FALSE;
-#ifdef DEBUG   
-    g_print("DB_add_extra_shipment( %d, %d)\n", personNum, receiver);
-#endif
+    
     p_person_records[personNum].extra[extrashipments] = receiver;
     p_person_records[personNum].extrashipments++;
     return TRUE;
@@ -351,9 +349,6 @@ gboolean DB_del_extra_shipment( unsigned long personNum, int shipmentIndex )
     extrashipments = p_person_records[personNum].extrashipments;
     if (shipmentIndex >= extrashipments) return FALSE;
     
-#ifdef DEBUG 
-    g_print("DB_del_extra_shipment( %d, %d)\n", personNum, shipmentIndex);
-#endif
     for (index = shipmentIndex+1; index < extrashipments; index++)
         p_person_records[personNum].extra[index-1] = p_person_records[personNum].extra[index];
     p_person_records[personNum].extra[index-1] = (-1);

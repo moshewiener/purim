@@ -103,7 +103,6 @@ gboolean CALC_calculate_shipments( void )
         }
     }
     maxMembers = maxMembersOfGroup( giversGroupArray, giversNum );
-    g_print("calculate: giversNum=%d maxMembers=%d\n", giversNum, maxMembers);
     
     if ((giversNum <= 1) || (giversNum > MAX_PUPULATION)) return FALSE;
     /* allocate the sending shipments array */
@@ -155,7 +154,6 @@ gboolean CALC_calculate_shipments( void )
         receiver = giverIndex + maxMembers;
         for (shipment = 0; shipment < shipmentsNum; shipment++)
         {
-            if (receiver == giverIndex) receiver++; // don't allow person to give to himself
             if (receiver >= giversNum) receiver -= giversNum;
             receiverFamily = randomLocations[receiver];
             givingToArray[giverIndex]->shipment[shipment] = receiverFamily;

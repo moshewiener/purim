@@ -74,13 +74,10 @@ void hideAll( void )
 void hideDataboxAll( void )
 {
     gtk_widget_hide( entry_Databox_1 );
-    gtk_widget_hide( entry_Databox_2 );
-    gtk_widget_hide( label1_Databox_hbox1 );
-    gtk_widget_hide( label1_Databox_vbox2_1 );
-    gtk_widget_hide( label1_Databox_vbox2_2 );
-    gtk_widget_hide( label1_Databox_vbox2_3 );
     gtk_widget_hide( label1_Databox_hbox2_3_1 );
+    gtk_widget_hide( entry_Databox_2 );
     gtk_widget_hide( label1_Databox_hbox2_3_2 );
+    gtk_widget_hide( label1_Databox_hbox1 );
     gtk_widget_hide( chkbtn_Databox );
     gtk_widget_hide( btn_Databox_add_family );
     gtk_widget_hide( btn_Databox_save_changes );
@@ -90,11 +87,13 @@ void hideDataboxAll( void )
     gtk_widget_hide( btn_Databox_quit );
     gtk_widget_hide( btn_Databox_add_to_list );
     gtk_widget_hide( btn_Databox_remove_from_list );
-    gtk_widget_hide( btn_Databox_save_shipments_num );
     gtk_widget_hide( listbox_Databox_1 );
     gtk_widget_hide( listbox_Databox_2 );
-    gtk_widget_hide( listbox_Databox_3 ); 
+    gtk_widget_hide( listbox_Databox_3 );
+    gtk_widget_hide( label1_Databox_vbox2_1 );
+    gtk_widget_hide( label1_Databox_vbox2_2 );
     gtk_widget_hide( scale_Databox_shipments );
+    gtk_widget_hide( btn_Databox_save_shipments_num );
 }
 void go_state0( void )
 {
@@ -266,5 +265,4 @@ void go_state8 ( void )
     gtk_widget_show( listbox_Databox_3 );
     gtk_widget_show( label1_Databox_vbox2_1 );
     gtk_widget_show( label1_Databox_vbox2_2 );
-    gtk_widget_show( label1_Databox_vbox2_3 );
 }
