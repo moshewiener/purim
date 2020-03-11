@@ -1,7 +1,5 @@
 #include <purim_api.h>
 
-#define SEPARATOR ','
-
 typedef struct
 {
     String32    firstname;
@@ -30,6 +28,7 @@ static unsigned long db_persons_count = 0;
 static int db_shipments_num = 0;
 static int db_groups_num = 0;
 static db_state state = DB_S_INIT;
+static FILE *dbfd = NULL;
 static String32 db_groupnames[MAX_GROUPS_NUM];
 static int personCompare(const void* a, const void* b);
 static void setGroupNumByGroupName( void );
@@ -41,7 +40,9 @@ static gboolean countOfLinesAndColumnsFile(char *filename, unsigned long *lines,
 gboolean DB_init_purim_db(char *filename)
 {
     int columns;
-    FILE *dbfd = NULL;
+    
+    
+    g_print("%s: filename=%s\n", __FUNCTION__, (filename==NULL)? "<NULL>" : filename);
     
     if (filename == NULL)
     { // Initialize a minimal default database
@@ -63,8 +64,16 @@ gboolean DB_init_purim_db(char *filename)
         db_shipments_num = 2;
         return TRUE;
     }
-    if (countOfLinesAndColumnsFile(filename, &db_persons_count, &columns) == FALSE) return FALSE;
-    if (db_persons_count < 1) return FALSE;
+    if (countOfLinesAndColumnsFile(filename, &db_persons_count, &columns) == FALSE) 
+    {
+        g_print("%s: bad file %s\n", __FUNCTION__, filename);
+        return FALSE;
+    }
+    if (db_persons_count < 1) 
+    {
+        g_print("%s: no valid purim data in file %s\n", __FUNCTION__, filename);
+        return FALSE;
+    }
     // if memory was allocated in a previous call to this function then release it
     if (p_person_records != NULL) free(p_person_records);
     p_person_records = malloc(sizeof(db_person_struct) * db_persons_count);
@@ -73,13 +82,20 @@ gboolean DB_init_purim_db(char *filename)
     if (dbfd == NULL) goto FAIL;
     if (db_state_machine(dbfd) == FALSE) goto FAIL;
     fclose( dbfd );
+    dbfd = NULL;
     setGroupNumByGroupName();
     
     return TRUE;
 FAIL:
-    if (dbfd != NULL) fclose( dbfd );
+    if (dbfd != NULL)
+    {
+        fclose( dbfd );
+        dbfd = NULL;
+    }
     free( p_person_records );
     p_person_records = NULL;
+    db_persons_count = 0;
+    state = DB_S_INIT;
     return FALSE;
 }
 
@@ -333,7 +349,9 @@ gboolean DB_add_extra_shipment( unsigned long personNum, unsigned long receiver 
     if (receiver > db_persons_count) return FALSE;
     extrashipments = p_person_records[personNum].extrashipments;
     if (extrashipments >= MAX_EXTRA_SHIPMENTS) return FALSE;
-    
+#ifdef DEBUG   
+    g_print("DB_add_extra_shipment( %d, %d)\n", personNum, receiver);
+#endif
     p_person_records[personNum].extra[extrashipments] = receiver;
     p_person_records[personNum].extrashipments++;
     return TRUE;
@@ -349,6 +367,9 @@ gboolean DB_del_extra_shipment( unsigned long personNum, int shipmentIndex )
     extrashipments = p_person_records[personNum].extrashipments;
     if (shipmentIndex >= extrashipments) return FALSE;
     
+#ifdef DEBUG 
+    g_print("DB_del_extra_shipment( %d, %d)\n", personNum, shipmentIndex);
+#endif
     for (index = shipmentIndex+1; index < extrashipments; index++)
         p_person_records[personNum].extra[index-1] = p_person_records[personNum].extra[index];
     p_person_records[personNum].extra[index-1] = (-1);
@@ -544,6 +565,8 @@ static gboolean db_state_machine( FILE *dbfd )
     fseek(dbfd, 0L, SEEK_END);
     filesize = ftell(dbfd);
     fseek(dbfd, 0L, SEEK_SET);
+    
+    g_print("%s filesize=%lu...\n", __FUNCTION__, filesize);
     
     if (filesize <=0) return FALSE;
     lineNum = 0; chrIndex=0;

@@ -18,6 +18,7 @@ typedef enum {
 #define MAX_GROUPS_NUM      12
 #define MAX_SHIPMENTS       12
 #define MAX_EXTRA_SHIPMENTS 5
+#define SEPARATOR ','
 
 /* Main window Buttons */
 extern GtkWidget *btnAddFamily, *btnDelFamily, *btnChgangeFamily, *btnShipmentsNum, *btnExtra;
@@ -42,7 +43,8 @@ int my_atoi( char *strNum );
 void pointerssort(void **array, size_t nitems, size_t size, int (*compar)(const void *, const void*));
 GtkWidget *create_listbox_in_scrollwin( GtkWidget **p_list_box,
                                         gint entriesNum, String32 *names,
-                                        GCallback row_selected_cb_function );
+                                        GCallback row_selected_cb_function,
+                                        void *user_data );
 void remove_all_rows_of_listbox( GtkWidget *listbox );
 void fill_listbox_with_persons( GtkWidget *listBox );
 
@@ -94,6 +96,7 @@ gboolean create_databox_window( char *title );
 void databox_request_service( databoxreq req );
 
 gboolean CALC_calculate_shipments( void );
+gboolean CALC_save_shipments(char *filename, char **errmsg);
 void CALC_debug_print_shipments( void );
 
 /* widgets show states functions */

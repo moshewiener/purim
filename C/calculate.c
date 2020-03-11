@@ -103,6 +103,7 @@ gboolean CALC_calculate_shipments( void )
         }
     }
     maxMembers = maxMembersOfGroup( giversGroupArray, giversNum );
+    g_print("calculate: giversNum=%d maxMembers=%d\n", giversNum, maxMembers);
     
     if ((giversNum <= 1) || (giversNum > MAX_PUPULATION)) return FALSE;
     /* allocate the sending shipments array */
@@ -154,6 +155,7 @@ gboolean CALC_calculate_shipments( void )
         receiver = giverIndex + maxMembers;
         for (shipment = 0; shipment < shipmentsNum; shipment++)
         {
+            if (receiver == giverIndex) receiver++; // don't allow person to give to himself
             if (receiver >= giversNum) receiver -= giversNum;
             receiverFamily = randomLocations[receiver];
             givingToArray[giverIndex]->shipment[shipment] = receiverFamily;
@@ -162,7 +164,6 @@ gboolean CALC_calculate_shipments( void )
             receivingFromArray[receiverFamily]->shipmentsnum++;
             receiver++;
         } /* for shipment */
-        givingToArray[giverIndex]->shipmentsnum = shipmentsNum;
         /* add the extra shipments */
         extraNum = DB_get_extra_shipments_num(randomLocations[giverIndex]);
         for (shipment = 0; shipment < extraNum; shipment++)
@@ -186,6 +187,7 @@ gboolean CALC_calculate_shipments( void )
     free( freeLocations );
     free( randomLocations );
     
+    msgBoxSuccess( window, "רשימות המשלוחים חושבו בהצלחה");
     return TRUE;
 }
 
@@ -256,6 +258,82 @@ static void free_calculations( void )
         free( receivingFromArray[ index ] );
         receivingFromArray[ index ] = NULL;
     }
+}
+
+/***********************************************/
+gboolean CALC_save_shipments( char *filename, char **errmsg )
+{
+    FILE *dbfd = NULL;
+    unsigned long personNum, giverNum, receiverNum;
+    int shipmentsnum,shipmentIndex;
+    char buffer[256];
+    char lmsg[128];
+    char *p_msg;
+
+    if (errmsg != NULL)
+    {
+        *errmsg = malloc(128);
+        p_msg = *errmsg;
+    }
+    else
+    {
+        p_msg = lmsg;
+    }
+
+    if ((giversNum < 1) || (familiesNum < 1))
+    {
+        sprintf(p_msg, "%s", "אין משפחות ששולחות משלוח מנות");
+        g_print("%s\n", p_msg);
+        return FALSE;
+    }
+    
+    dbfd = fopen(filename, "w+");
+    if (dbfd == NULL)
+    {
+        sprintf(p_msg, "%s %48s", "לא ניתן לפתוח את קובץ ", filename);
+        g_print("%s\n", p_msg);
+        return FALSE;
+    }
+    // 1st line: giversNum,familiesNum,<CR>
+    sprintf( buffer, "%lu%c%lu%c\n", giversNum, SEPARATOR, familiesNum, SEPARATOR );
+    fputs(buffer, dbfd);
+    
+    // givers lines: personNum,surname,firstname,shipmentNum,shipment[0],...shipment[MAX_SHIPMENTS + MAX_EXTRA_SHIPMENTS],\n"
+    for (giverNum = 0; giverNum < giversNum; giverNum++)
+    { 
+        personNum = givingToArray[giverNum]->familynum;
+        shipmentsnum = givingToArray[giverNum]->shipmentsnum;
+        sprintf( buffer, "%lu%c%s%c%s%c",
+                 personNum, SEPARATOR,
+                 DB_get_surname( personNum ), SEPARATOR,
+                 DB_get_firstname( personNum ), SEPARATOR );
+        fputs(buffer, dbfd);
+        for (shipmentIndex=0; shipmentIndex < shipmentsnum; shipmentIndex++)
+        {
+            sprintf( buffer, "%lu%c", givingToArray[giverNum]->shipment[shipmentIndex] , SEPARATOR);
+            fputs(buffer, dbfd);
+        } // for shipmentIndex...
+        fputs("\n", dbfd);
+    } // for giverNum...
+    
+    // receivers lines: surname,firstname,shipmentNum,shipment[0],...shipment[MAX_SHIPMENTS],\n"
+    for (receiverNum = 0; receiverNum < familiesNum; receiverNum++)
+    { 
+        shipmentsnum = receivingFromArray[receiverNum]->shipmentsnum;
+        sprintf( buffer, "%s%c%s%c",
+                 DB_get_surname( receiverNum ), SEPARATOR,
+                 DB_get_firstname( receiverNum ), SEPARATOR );
+        fputs(buffer, dbfd);
+        for (shipmentIndex=0; shipmentIndex < shipmentsnum; shipmentIndex++)
+        {
+            sprintf( buffer, "%lu%c", receivingFromArray[receiverNum]->shipment[shipmentIndex] , SEPARATOR);
+            fputs(buffer, dbfd);
+        } // for shipmentIndex...
+        fputs("\n", dbfd);
+    } // for receiverNum...
+    
+    fclose(dbfd);
+    return TRUE;
 }
 
 /***********************************************/

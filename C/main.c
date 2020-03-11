@@ -31,6 +31,9 @@ gboolean del_group_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, 
 gboolean extra_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean shipmentsnum_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean calculate_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
+static gboolean saveDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
+static gboolean save_shipments_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
+
 
 static void set_button_attributes(button_data *btn, gint colour, gint backcolour, gchar *title);
 static void add_toolbar_to_box( GtkWidget *box );
@@ -145,7 +148,7 @@ gboolean openfile_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, g
 }
 
 /*-----------------------------------------------------------------------------*/
-gboolean saveDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+static gboolean saveDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
 {
     GtkWidget *dialog;
     GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SAVE;
@@ -179,6 +182,50 @@ gboolean saveDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpo
     }
     
     gtk_widget_destroy (dialog);
+    go_state1();
+    return TRUE;
+}
+
+/*-----------------------------------------------------------------------------*/
+static gboolean save_shipments_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+{
+    GtkWidget *dialog;
+    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SAVE;
+    GtkFileFilter *filter;
+    gint res;
+    gboolean result;
+    char *errmsg = NULL;
+    
+    dialog = gtk_file_chooser_dialog_new ("Save Shipments File",
+                                          window,
+                                          action, "_ביטול",
+                                          GTK_RESPONSE_CANCEL, "_שמור",
+                                          GTK_RESPONSE_ACCEPT,
+                                          NULL);
+    
+    filter = gtk_file_filter_new();
+    gtk_file_filter_add_pattern(filter, "*.csv");
+    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+    
+    res = gtk_dialog_run (GTK_DIALOG (dialog));
+    if (res == GTK_RESPONSE_ACCEPT)
+    {
+        char *filename;
+        char command[64];
+        GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
+        gtk_file_chooser_set_create_folders( chooser, FALSE );
+        filename = gtk_file_chooser_get_filename (chooser);
+        g_print("Saving Shipments in file: %s\n", filename);
+        result = CALC_save_shipments( filename, &errmsg );
+        g_free( filename );
+    }
+    
+    gtk_widget_destroy (dialog);
+    if (result == TRUE)
+        msgBoxSuccess( window, "רשימות המשלוחים נשמרו בהצלחה");
+    else
+        msgBoxError( window, (errmsg == NULL)? "נכשל נסיון לשמור משלוחים" : errmsg );
+    if (errmsg != NULL) free( errmsg );
     go_state1();
     return TRUE;
 }
@@ -221,6 +268,7 @@ gboolean help_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpoin
            DB_get_persons_num(), DB_get_givers_num(), DB_get_shipments_num());
 
     CALC_debug_print_shipments();
+    CALC_save_shipments("./nofile.csv", NULL);
     
     return TRUE;
 }
@@ -430,7 +478,8 @@ static GtkWidget *create_frame_with_buttons( gint  horizontal,
 /****************************************************************************/
 GtkWidget *create_listbox_in_scrollwin( GtkWidget **p_list_box,
                                         gint entriesNum, String32 *names,
-                                        GCallback row_selected_cb_function )
+                                        GCallback row_selected_cb_function,
+                                        void *user_data )
 {
     GtkWidget *bbox;
     GtkWidget *row;
@@ -466,7 +515,7 @@ GtkWidget *create_listbox_in_scrollwin( GtkWidget **p_list_box,
     } 
 
     if (row_selected_cb_function != NULL)
-        g_signal_connect (*p_list_box, "row-selected", row_selected_cb_function, NULL);
+        g_signal_connect (*p_list_box, "row-selected", row_selected_cb_function, user_data);
     
     return scrollwindow;
 }
@@ -509,7 +558,9 @@ void fill_listbox_with_persons( GtkWidget *listBox )
     GtkWidget *row, *rowLabel;
     
     persons = DB_get_persons_num();
+#ifdef DEBUG
     g_print("persons=%d\n", persons);
+#endif
     for (index = 0; index < persons; index++)
     {
         firstname = DB_get_firstname( index );
@@ -637,12 +688,13 @@ int main( int argc, char *argv[] )
     g_signal_connect (btnShipmentsNum, "button-press-event", G_CALLBACK (shipmentsnum_button_pressed_callback), NULL);
     g_signal_connect (btnSaveDbFile, "button-press-event", G_CALLBACK (saveDB_button_pressed_callback), NULL);
     g_signal_connect (btnCalculate, "button-press-event", G_CALLBACK (calculate_button_pressed_callback), NULL);
+    g_signal_connect (btnSaveCalc, "button-press-event", G_CALLBACK (save_shipments_button_pressed_callback), NULL);
     // Expand argument is true, so fill in all the extra space in the box, and the
     //fill argument is also true, so he extra space is allocated to the objects themselves 
     gtk_box_pack_start (GTK_BOX (main_hbox), frame_vert, TRUE, TRUE, 10);
     
     // Create the 2nd frame and add it to the main container
-    scrollwin = create_listbox_in_scrollwin( &list_box, 0, NULL, (GCallback) row_selected_callback );
+    scrollwin = create_listbox_in_scrollwin( &list_box, 0, NULL, (GCallback) row_selected_callback, NULL );
     gtk_list_box_set_sort_func( list_box, listBoxSortRows, NULL, NULL);
     frame_listbox = gtk_frame_new("רשימת משפחות");
     gtk_frame_set_label_align( frame_listbox, 0.5, 1.0);
