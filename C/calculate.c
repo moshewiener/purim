@@ -18,6 +18,23 @@ typedef struct
     unsigned long   shipment[MAX_SHIPMENTS];
 } receiverstruct;
 
+typedef enum
+{
+    CALC_S_INIT = 0,
+    CALC_S_GIVERSNUM,
+    CALC_S_RECEIVERSNUM,
+    CALC_S_1STLINETAIL,
+    CALC_S_INIT_GIVERLINE,
+    CALC_S_GIVERFAMILYNUM,
+    CALC_S_GIVERSURNAME,
+    CALC_S_GIVERFIRSTNAME,
+    CALC_S_GIVERSHIPMENT,
+    CALC_S_INITRECEIVERLINE,
+    CALC_S_RECEIVERSURNAME,
+    CALC_S_RECEIVERFIRSTNAME,
+    CALC_S_RECIEVERSHIPMENT
+} calc_state;
+
 static giverstruct *givingToArray[MAX_PUPULATION] = { NULL };
 static receiverstruct *receivingFromArray[MAX_PUPULATION] = { NULL };
 static unsigned long giversNum = 0;
@@ -27,6 +44,7 @@ static void free_calculations( void );
 static int groupnumCompare(const void* p_index_a, const void* p_index_b);
 static int familyNumberCompare(const void* a, const void* b);
 static unsigned long maxMembersOfGroup( int *giversGroupArray, unsigned long giversNum);
+static gboolean calc_state_machine( FILE *dbfd, char *p_msg );
 
 /************************************/
 gboolean CALC_calculate_shipments( void )
@@ -79,8 +97,9 @@ gboolean CALC_calculate_shipments( void )
         msgBoxError( window, "אין מספיק משפחות לבצע את כמות המשלוחים הרצויה");
         return FALSE;
     }
-    
-    g_print("calculate: familiesNum=%d\n", familiesNum);
+#ifdef DEBUG    
+    g_print("calculate: familiesNum=%d. shipmentsNum=%d\n", familiesNum, shipmentsNum);
+#endif
     if (familiesNum <= 1) return FALSE;
     /* allocate the givers and their corresponding group lists */
     giversArray = malloc( sizeof(int) * familiesNum );
@@ -103,8 +122,9 @@ gboolean CALC_calculate_shipments( void )
         }
     }
     maxMembers = maxMembersOfGroup( giversGroupArray, giversNum );
+#ifdef DEBUG
     g_print("calculate: giversNum=%d maxMembers=%d\n", giversNum, maxMembers);
-    
+#endif    
     if ((giversNum <= 1) || (giversNum > MAX_PUPULATION)) return FALSE;
     /* allocate the sending shipments array */
     for (index = 0; index < giversNum; index++)
@@ -118,7 +138,7 @@ gboolean CALC_calculate_shipments( void )
         receivingFromArray[ index ] = malloc( sizeof(receiverstruct) );
         memset(receivingFromArray[ index ], 0, sizeof(receiverstruct));
     }
-    /* allocate 2 tables neede to randomly blend the givers */
+    /* allocate 2 tables needed to randomly blend the givers */
     freeLocations = malloc( sizeof(int) * giversNum );
     randomLocations = malloc( sizeof(int) * giversNum );
     /* fill the free locations table with all the locations of givers */
@@ -136,6 +156,7 @@ gboolean CALC_calculate_shipments( void )
             break;
         }
         randomLocations[index] = freeLocations[randNum];
+        //bring the last free location into the newly vacant location
         freeLocations[randNum] = freeLocations[giversNum - index - 1];
     }
     
@@ -175,7 +196,7 @@ gboolean CALC_calculate_shipments( void )
                 givingToArray[giverIndex]->familynum;
             receivingFromArray[receiverFamily]->shipmentsnum++;
         }
-        givingToArray[giverIndex]->shipmentsnum += extraNum;
+        givingToArray[giverIndex]->shipmentsnum =shipmentsNum + extraNum;
     } /* for giverIndex */
     
     /* sort the givings array according to family number */
@@ -279,7 +300,9 @@ gboolean CALC_save_shipments( char *filename, char **errmsg )
     {
         p_msg = lmsg;
     }
-
+#ifdef DEBUG
+    g_print("%s: giversNum %d familiesNum %d\n", __FUNCTION__, giversNum, familiesNum);
+#endif
     if ((giversNum < 1) || (familiesNum < 1))
     {
         sprintf(p_msg, "%s", "אין משפחות ששולחות משלוח מנות");
@@ -300,7 +323,8 @@ gboolean CALC_save_shipments( char *filename, char **errmsg )
     
     // givers lines: personNum,surname,firstname,shipmentNum,shipment[0],...shipment[MAX_SHIPMENTS + MAX_EXTRA_SHIPMENTS],\n"
     for (giverNum = 0; giverNum < giversNum; giverNum++)
-    { 
+    {
+        if (givingToArray[giverNum] == NULL) break;
         personNum = givingToArray[giverNum]->familynum;
         shipmentsnum = givingToArray[giverNum]->shipmentsnum;
         sprintf( buffer, "%lu%c%s%c%s%c",
@@ -318,7 +342,8 @@ gboolean CALC_save_shipments( char *filename, char **errmsg )
     
     // receivers lines: surname,firstname,shipmentNum,shipment[0],...shipment[MAX_SHIPMENTS],\n"
     for (receiverNum = 0; receiverNum < familiesNum; receiverNum++)
-    { 
+    {
+        if (receivingFromArray[receiverNum] == NULL) break;
         shipmentsnum = receivingFromArray[receiverNum]->shipmentsnum;
         sprintf( buffer, "%s%c%s%c",
                  DB_get_surname( receiverNum ), SEPARATOR,
@@ -360,11 +385,712 @@ void CALC_debug_print_shipments( void )
    g_print("Receiving table\n===============\n");
    for (receiver = 0; receiver < familiesNum; receiver++)
    {
-       if (receivingFromArray[giverIndex] == NULL) break;
+       if (receivingFromArray[receiver] == NULL) break;
        shipments = receivingFromArray[receiver]->shipmentsnum;
        g_print("Family %d gets from: ", receiver);
        for (shipmentIndex = 0; shipmentIndex < shipments; shipmentIndex++)
            g_print("[%d] ", receivingFromArray[receiver]->shipment[shipmentIndex]);
        g_print("\n");
    }
+}
+
+
+/*******************************************************************/
+gboolean CALC_load_shipments(char *filename, char **errmsg)
+{
+    unsigned long lines, columns, index;
+    FILE *dbfd = NULL;
+    char lmsg[128];
+    char *p_msg;
+
+    if (errmsg != NULL)
+    {
+        *errmsg = malloc(128);
+        p_msg = *errmsg;
+    }
+    else
+    {
+        p_msg = lmsg;
+    }
+    
+    /* free previous used resources */
+    for (index = 0; index < MAX_PUPULATION; index++)
+    {
+        if (givingToArray[index] != NULL) { free( givingToArray[index] ); givingToArray[index] = NULL; }
+        if (receivingFromArray[index] != NULL) { free( receivingFromArray[index] ); receivingFromArray[index] = NULL; }
+    }
+    
+    countOfLinesAndColumnsFile(filename, &lines, &columns);
+    if (lines < 1) 
+    {
+        g_print("%s: no valid purim data in file %s\n", __FUNCTION__, filename);
+        sprintf( p_msg, "%s\n%s", "אין נתוני משלוחים בקובץ ", filename );
+        goto FAIL;
+    }
+    
+    dbfd = fopen(filename, "r");
+    if (dbfd == NULL) 
+    {
+        g_print("%s: failed to open file %s\n", __FUNCTION__, filename);
+        sprintf( p_msg, "%s\n%s", "לא ניתן לפתוח את קובץ", filename );
+        goto FAIL;
+    }
+    
+    if (calc_state_machine( dbfd, p_msg ) == FALSE) goto FAIL;
+    
+    fclose( dbfd );
+    return TRUE;
+    
+FAIL:
+    if (dbfd != NULL)
+    {
+        fclose( dbfd );
+        dbfd = NULL;
+    }
+    return FALSE;
+}
+
+/*******************************************************************
+ * Retrieve data from the shipments file to set the counters
+ * giversNum and familiesNum, and fill the arrays
+ * givingToArray and receivingFromArray
+********************************************************************/
+static gboolean calc_state_machine( FILE *dbfd, char *p_msg )
+{
+    calc_state state = CALC_S_INIT;
+    unsigned long filesize, lineNum, byteNum, giverIndex=0, receiverIndex=0;
+    int chrIndex, newChr, tmpVal;
+    int shipmentsnum, shipmentIndex;
+    char buffer[sizeof(String32)];
+    char firstname[sizeof(String32)];
+    char surname[sizeof(String32)];
+    
+    fseek(dbfd, 0L, SEEK_END);
+    filesize = ftell(dbfd);
+    fseek(dbfd, 0L, SEEK_SET);
+#ifdef DEBUG
+    g_print("%s filesize=%lu...\n", __FUNCTION__, filesize);
+#endif
+    if (filesize <=0) 
+    {
+        g_print("%s: shipings file size 0\n", __FUNCTION__ );
+        sprintf( p_msg, "%s:\n%s", __FUNCTION__, "קובץ המשלוחים ריק");
+        return FALSE;
+    }
+    giversNum = 0; familiesNum = 0;
+    lineNum = 0; chrIndex=0;
+    for (byteNum=0; byteNum < filesize; byteNum++)
+    {
+        newChr = fgetc(dbfd);
+        switch (state)
+        {
+            case CALC_S_INIT:
+                if (newChr == SEPARATOR)
+                {
+                    sprintf(p_msg, "Error %s: Line %d starts with the CSV separator\n", __FUNCTION__, lineNum);
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == '\n')
+                {
+                    sprintf(p_msg, "Error %s: Line %d is empty\n", __FUNCTION__, lineNum);
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file is empty\n", __FUNCTION__ );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    buffer[0]=(char)(newChr); chrIndex=1; state = CALC_S_GIVERSNUM;
+                }
+                else // normal char
+                {
+                    sprintf( p_msg, "Error %s: illegal givers number", __FUNCTION__ );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                break;
+            case CALC_S_GIVERSNUM:
+                if (newChr == SEPARATOR)
+                {
+                    buffer[chrIndex]='\0'; chrIndex=0;
+                    tmpVal = my_atoi( buffer );
+                    if ((tmpVal > 0) && (tmpVal <= MAX_PUPULATION))
+                    {
+                        giversNum = tmpVal;
+                        state = CALC_S_RECEIVERSNUM;
+                    }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: wrong numer of givers %d\n", __FUNCTION__, tmpVal );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                }
+                else if (newChr == '\n')
+                {
+                    sprintf(p_msg, "Error %s: 1st line ends after number of givers\n", __FUNCTION__ );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file ends after number of givers\n", __FUNCTION__ );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    if (chrIndex < 10)
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: too large number of givers\n", __FUNCTION__ );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                }
+                else // normal char
+                {
+                    sprintf(p_msg, "Error %s: illegal number of givers\n", __FUNCTION__ );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                break;
+            case CALC_S_RECEIVERSNUM:
+                if (newChr == SEPARATOR)
+                {
+                    buffer[chrIndex]='\0'; chrIndex=0;
+                    tmpVal = my_atoi( buffer );
+                    if ((tmpVal > 0) && (tmpVal <= MAX_PUPULATION))
+                    {
+                        familiesNum = tmpVal;
+                        state = CALC_S_1STLINETAIL;
+                    }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: wrong numer of receivers %d", __FUNCTION__, tmpVal );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                }
+                else if (newChr == '\n')
+                {
+                    buffer[chrIndex]='\0'; chrIndex=0;
+                    tmpVal = my_atoi( buffer );
+                    if ((tmpVal > 0) && (tmpVal <= MAX_PUPULATION))
+                    {
+                        familiesNum = tmpVal;
+                        lineNum++;
+                        givingToArray[giverIndex] = malloc(sizeof(giverstruct));
+                        state = CALC_S_INIT_GIVERLINE;
+                    }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: wrong numer of receivers %d", __FUNCTION__, tmpVal );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file ends after number of receivers", __FUNCTION__ );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    if (chrIndex < 10)
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: too large number of receivers", __FUNCTION__ );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                }
+                else // normal char
+                {
+                    sprintf(p_msg, "Error %s: illegal number of receivers", __FUNCTION__ );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                break;
+            case CALC_S_1STLINETAIL:
+                if (newChr == SEPARATOR)
+                {
+                    // keep reading. Tail may contain several empty fields which make a sequence of separators
+                }
+                else if (newChr == '\n')
+                {
+                    givingToArray[giverIndex] = malloc(sizeof(giverstruct));
+                    lineNum++;
+                    state = CALC_S_INIT_GIVERLINE;
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file ends after number of receivers", __FUNCTION__ );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    sprintf(p_msg, "Error %s: shipments file has too many fields in 1st line", __FUNCTION__ );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else // normal char
+                {
+                    sprintf(p_msg, "Error %s: shipments file has too many fields in 1st line", __FUNCTION__ );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                break;
+            case CALC_S_INIT_GIVERLINE:
+                if (newChr == SEPARATOR)
+                {
+                    sprintf(p_msg, "Error %s: shipments file giver line %d start with a separator", __FUNCTION__ , lineNum);
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == '\n')
+                {
+                    sprintf(p_msg, "Error %s: shipments file empty line %d", __FUNCTION__ , lineNum);
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file ends after givers line %d", __FUNCTION__ , lineNum);
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    buffer[0] = (char)newChr;
+                    chrIndex = 1;
+                    state = CALC_S_GIVERFAMILYNUM;
+                }
+                else // normal char
+                {
+                    sprintf(p_msg, "Error %s: givers line %d illegal family number", __FUNCTION__ , lineNum);
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                break;
+            case CALC_S_GIVERFAMILYNUM:
+                if (newChr == SEPARATOR)
+                {
+                    buffer[chrIndex]='\0'; chrIndex=0;
+                    tmpVal = my_atoi( buffer );
+                    if ((tmpVal >= 0) && (tmpVal <= familiesNum))
+                    {
+                        givingToArray[giverIndex]->familynum = tmpVal;
+#ifdef DEBUG                        
+                        g_print("%s: givingToArray[%d]->familynum = %d\n", __FUNCTION__, giverIndex, givingToArray[giverIndex]->familynum);
+#endif
+                        state = CALC_S_GIVERSURNAME;
+                    }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: wrong giver family number at line %d", __FUNCTION__, lineNum );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                }
+                else if (newChr == '\n')
+                {
+                    sprintf(p_msg, "Error %s: giver line ends after family number at line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file ends in middle of giver line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    if (chrIndex < 10)
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: too large family number at line %d\n", __FUNCTION__, lineNum );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                }
+                else // normal char
+                {
+                    sprintf(p_msg, "Error %s: illegal family number at line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                break;
+            case CALC_S_GIVERSURNAME:
+                if (newChr == SEPARATOR)
+                {
+                    buffer[chrIndex]='\0'; chrIndex=0;
+                    strcpy(surname, buffer); state = CALC_S_GIVERFIRSTNAME;
+                }
+                else if (newChr == '\n')
+                {
+                    sprintf(p_msg, "Error %s: giver line ends after surname at line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file ends in middle of giver line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    if (chrIndex < (sizeof(String32)-1))
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                }
+                else // normal char
+                {if (chrIndex < (sizeof(String32)-1))
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                    
+                }
+                break;
+            case CALC_S_GIVERFIRSTNAME:
+                if (newChr == SEPARATOR)
+                {
+                    buffer[chrIndex]='\0'; chrIndex=0;
+                    shipmentsnum = 0; shipmentIndex = 0;
+                    strcpy(firstname, buffer); state = CALC_S_GIVERSHIPMENT;
+                }
+                else if (newChr == '\n')
+                {
+                    sprintf(p_msg, "Error %s: giver line ends after first name at line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file ends in middle of giver line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    if (chrIndex < (sizeof(String32)-1))
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                }
+                else // normal char
+                {if (chrIndex < (sizeof(String32)-1))
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                    
+                }
+                break;
+            case CALC_S_GIVERSHIPMENT:
+                if (newChr == SEPARATOR)
+                {
+                    buffer[chrIndex]='\0'; chrIndex=0;
+                    tmpVal = my_atoi( buffer );
+                    if ((tmpVal >= 0) && (tmpVal <= familiesNum))
+                    {
+                        givingToArray[giverIndex]->shipment[shipmentIndex] = tmpVal;
+#ifdef DEBUG                        
+                        g_print("%s: givingToArray[%d]->shipment[%d] = %d\n", 
+                                __FUNCTION__, giverIndex, shipmentIndex, givingToArray[giverIndex]->shipment[shipmentIndex] );
+#endif                        
+                        shipmentIndex++;
+                    }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: wrong shipment number at line %d index %d", __FUNCTION__, lineNum, shipmentIndex );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                    
+                    givingToArray[giverIndex]->shipmentsnum = shipmentIndex;
+                }
+                else if (newChr == '\n')
+                {
+                    if (chrIndex > 0)
+                    {
+                        buffer[chrIndex]='\0';
+                        tmpVal = my_atoi( buffer );
+                        if ((tmpVal >= 0) && (tmpVal <= familiesNum))
+                        {
+                            givingToArray[giverIndex]->shipment[shipmentIndex] = tmpVal;
+#ifdef DEBUG                            
+                            g_print("%s: givingToArray[%d]->shipment[%d] = %d\n", 
+                                    __FUNCTION__, giverIndex, shipmentIndex, givingToArray[giverIndex]->shipment[shipmentIndex] );
+#endif
+                            shipmentIndex++;
+                        }
+                        else
+                        {
+                            sprintf(p_msg, "Error %s: wrong shipment number at line %d index %d", __FUNCTION__, lineNum, shipmentIndex );
+                            g_print("%s\n", p_msg);
+                            return FALSE;
+                        }
+                    } // chrIndex > 0
+                    givingToArray[giverIndex]->shipmentsnum = shipmentIndex;chrIndex=0;
+                    lineNum++;
+                    giverIndex++;
+                    if (giverIndex < giversNum)
+                    {
+                        givingToArray[giverIndex] = malloc(sizeof(giverstruct));
+                        state = CALC_S_INIT_GIVERLINE;
+                    }
+                    else
+                    {
+                        receivingFromArray[0] = malloc(sizeof(receiverstruct));
+                        state = CALC_S_INITRECEIVERLINE;
+                    }
+                    
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipment file end at line %d with no receiving lines", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    if (chrIndex < 10)
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: too large shipment number at line %d index %d\n", __FUNCTION__, lineNum, shipmentIndex );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                }
+                else // normal char
+                {
+                    sprintf(p_msg, "Error %s: wrong shipment number at line %d index %d", __FUNCTION__, lineNum, shipmentIndex );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                    
+                }
+                break;
+            case CALC_S_INITRECEIVERLINE:
+                if (newChr == SEPARATOR)
+                {
+                    sprintf(p_msg, "Error %s: shipments file receiver line %d start with a separator", __FUNCTION__ , lineNum);
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == '\n')
+                {
+                    sprintf(p_msg, "Error %s: shipments file empty line %d", __FUNCTION__ , lineNum);
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file ends after receivers line %d", __FUNCTION__ , lineNum);
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    buffer[0] = (char)newChr;
+                    chrIndex = 1;
+                    state = CALC_S_RECEIVERSURNAME;
+                }
+                else // normal char
+                {
+                    buffer[0] = (char)newChr;
+                    chrIndex = 1;
+                    state = CALC_S_RECEIVERSURNAME;
+                }
+                break;
+            case CALC_S_RECEIVERSURNAME:
+                if (newChr == SEPARATOR)
+                {
+                    buffer[chrIndex]='\0'; chrIndex=0;
+                    strcpy(surname, buffer); state = CALC_S_RECEIVERFIRSTNAME;
+                }
+                else if (newChr == '\n')
+                {
+                    sprintf(p_msg, "Error %s: receiver line ends after surname at line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file ends in middle of receiver line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    if (chrIndex < (sizeof(String32)-1))
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                }
+                else // normal char
+                {if (chrIndex < (sizeof(String32)-1))
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                    
+                }
+                break;
+            case CALC_S_RECEIVERFIRSTNAME:
+                if (newChr == SEPARATOR)
+                {
+                    buffer[chrIndex]='\0'; chrIndex=0;
+                    shipmentsnum = 0; shipmentIndex = 0;
+                    strcpy(surname, buffer); state = CALC_S_RECIEVERSHIPMENT;
+                }
+                else if (newChr == '\n')
+                {
+                    sprintf(p_msg, "Error %s: receiver line ends after first name at line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if (newChr == EOF)
+                {
+                    sprintf(p_msg, "Error %s: shipments file ends in middle of receiver line %d\n", __FUNCTION__, lineNum );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    if (chrIndex < (sizeof(String32)-1))
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                }
+                else // normal char
+                {if (chrIndex < (sizeof(String32)-1))
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                    
+                }
+                break;
+            case CALC_S_RECIEVERSHIPMENT:
+                if (newChr == SEPARATOR)
+                {
+                    buffer[chrIndex]='\0'; chrIndex=0;
+                    tmpVal = my_atoi( buffer );
+                    if ((tmpVal >= 0) && (tmpVal <= familiesNum))
+                    {
+                        receivingFromArray[receiverIndex]->shipment[shipmentIndex] = tmpVal;
+ #ifdef DEBUG                       
+                        g_print("%s: receivingFromArray[%d]->shipment[%d] = %d\n", 
+                                __FUNCTION__, receiverIndex, shipmentIndex, receivingFromArray[receiverIndex]->shipment[shipmentIndex] );
+#endif
+                        shipmentIndex++;
+                    }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: wrong shipment number at line %d index %d", __FUNCTION__, lineNum, shipmentIndex );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                    
+                    receivingFromArray[receiverIndex]->shipmentsnum = shipmentIndex;
+                }
+                else if (newChr == '\n')
+                {
+                    if (chrIndex > 0)
+                    {
+                        buffer[chrIndex]='\0';
+                        tmpVal = my_atoi( buffer );
+                        if ((tmpVal >= 0) && (tmpVal <= familiesNum))
+                        {
+                            receivingFromArray[receiverIndex]->shipment[shipmentIndex] = tmpVal;
+#ifdef DEBUG
+                            g_print("%s: receivingFromArray[%d]->shipment[%d] = %d\n", 
+                                    __FUNCTION__, receiverIndex, shipmentIndex, receivingFromArray[receiverIndex]->shipment[shipmentIndex] );
+#endif
+                            shipmentIndex++;
+                        }
+                        else
+                        {
+                            sprintf(p_msg, "Error %s: wrong shipment number at line %d index %d", __FUNCTION__, lineNum, shipmentIndex );
+                            g_print("%s\n", p_msg);
+                            return FALSE;
+                        }
+                    } // chrIndex > 0
+                    receivingFromArray[receiverIndex]->shipmentsnum = shipmentIndex;
+                    chrIndex=0;
+                    lineNum++;
+                    receiverIndex++;
+                    if (receiverIndex < familiesNum)
+                    {
+                        receivingFromArray[receiverIndex] = malloc(sizeof(receiverstruct));
+                        state = CALC_S_INITRECEIVERLINE;
+                    }
+                    else
+                    {
+                        //got to end of last receiving line
+#ifdef DEBUG
+                        g_print("%s: Success\n", __FUNCTION__ );
+#endif
+                        return TRUE;
+                    }
+                    
+                }
+                else if (newChr == EOF)
+                {
+                    if ((receiverIndex + 1) < familiesNum)
+                    {
+                        sprintf(p_msg, "Error %s: shipment file only %d receiver lines while expecting %d", __FUNCTION__, (receiverIndex + 1), familiesNum );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                    if (chrIndex > 0)
+                    {
+                        buffer[chrIndex]='\0';
+                        tmpVal = my_atoi( buffer );
+                        if ((tmpVal >= 0) && (tmpVal <= familiesNum))
+                        {
+                            receivingFromArray[receiverIndex]->shipment[shipmentIndex] = tmpVal;
+#ifdef DEBUG
+                            g_print("%s: receivingFromArray[%d]->shipment[%d] = %d\n", 
+                                    __FUNCTION__, receiverIndex, shipmentIndex, receivingFromArray[receiverIndex]->shipment[shipmentIndex] );
+#endif
+                            shipmentIndex++;
+                        }
+                        else
+                        {
+                            sprintf(p_msg, "Error %s: wrong shipment number at line %d index %d", __FUNCTION__, lineNum, shipmentIndex );
+                            g_print("%s\n", p_msg);
+                            return FALSE;
+                        }
+                    } // chrIndex > 0
+                    receivingFromArray[receiverIndex]->shipmentsnum = shipmentIndex;
+                    //got to end of last receiving line
+#ifdef DEBUG
+                    g_print("%s: Success\n", __FUNCTION__ );
+#endif
+                    return TRUE;
+                    
+                }
+                else if ((newChr >= '0') && (newChr <= '9'))
+                { // digit
+                    if (chrIndex < 10)
+                    { buffer[chrIndex] = (char)newChr; chrIndex++; }
+                    else
+                    {
+                        sprintf(p_msg, "Error %s: too large shipment number at line %d index %d\n", __FUNCTION__, lineNum, shipmentIndex );
+                        g_print("%s\n", p_msg);
+                        return FALSE;
+                    }
+                }
+                else // normal char
+                {
+                    sprintf(p_msg, "Error %s: wrong shipment number at line %d index %d", __FUNCTION__, lineNum, shipmentIndex );
+                    g_print("%s\n", p_msg);
+                    return FALSE;
+                    
+                }
+                break;
+            default:
+                break;
+        } // switch state
+    } // for byteNum
+    
+    
+    return TRUE;
 }

@@ -33,7 +33,7 @@ gboolean shipmentsnum_button_pressed_callback(GtkWidget *widget, GdkEvent  *even
 gboolean calculate_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 static gboolean saveDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 static gboolean save_shipments_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
-
+static gboolean load_shipments_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 
 static void set_button_attributes(button_data *btn, gint colour, gint backcolour, gchar *title);
 static void add_toolbar_to_box( GtkWidget *box );
@@ -230,6 +230,50 @@ static gboolean save_shipments_button_pressed_callback(GtkWidget *widget, GdkEve
     return TRUE;
 }
 
+/*-----------------------------------------------------------------------------*/
+static gboolean load_shipments_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+{
+    GtkWidget *dialog;
+    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SAVE;
+    GtkFileFilter *filter;
+    gint res;
+    gboolean result;
+    char *errmsg = NULL;
+    
+    dialog = gtk_file_chooser_dialog_new ("Load Shipments File",
+                                          window,
+                                          action, "_ביטול",
+                                          GTK_RESPONSE_CANCEL, "_שמור",
+                                          GTK_RESPONSE_ACCEPT,
+                                          NULL);
+    
+    filter = gtk_file_filter_new();
+    gtk_file_filter_add_pattern(filter, "*.csv");
+    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+    
+    res = gtk_dialog_run (GTK_DIALOG (dialog));
+    if (res == GTK_RESPONSE_ACCEPT)
+    {
+        char *filename;
+        char command[64];
+        GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
+        gtk_file_chooser_set_create_folders( chooser, FALSE );
+        filename = gtk_file_chooser_get_filename (chooser);
+        g_print("Loading Shipments from file: %s\n", filename);
+        result = CALC_load_shipments( filename, &errmsg );
+        g_free( filename );
+    }
+    
+    gtk_widget_destroy (dialog);
+    if (result == TRUE)
+        msgBoxSuccess( window, "רשימות המשלוחים נטען בהצלחה");
+    else
+        msgBoxError( window, (errmsg == NULL)? "נכשל נסיון לטעון משלוחים" : errmsg );
+    if (errmsg != NULL) free( errmsg );
+    go_state1();
+    return TRUE;
+}
+
 /*---------------------------------------------------------*/
 gboolean calculate_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
 {
@@ -268,6 +312,7 @@ gboolean help_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpoin
            DB_get_persons_num(), DB_get_givers_num(), DB_get_shipments_num());
 
     CALC_debug_print_shipments();
+    g_print("Saving shipments...\n");
     CALC_save_shipments("./nofile.csv", NULL);
     
     return TRUE;
@@ -689,6 +734,7 @@ int main( int argc, char *argv[] )
     g_signal_connect (btnSaveDbFile, "button-press-event", G_CALLBACK (saveDB_button_pressed_callback), NULL);
     g_signal_connect (btnCalculate, "button-press-event", G_CALLBACK (calculate_button_pressed_callback), NULL);
     g_signal_connect (btnSaveCalc, "button-press-event", G_CALLBACK (save_shipments_button_pressed_callback), NULL);
+    g_signal_connect (btnLoadCalc, "button-press-event", G_CALLBACK (load_shipments_button_pressed_callback), NULL);
     // Expand argument is true, so fill in all the extra space in the box, and the
     //fill argument is also true, so he extra space is allocated to the objects themselves 
     gtk_box_pack_start (GTK_BOX (main_hbox), frame_vert, TRUE, TRUE, 10);

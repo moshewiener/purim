@@ -34,7 +34,6 @@ static int personCompare(const void* a, const void* b);
 static void setGroupNumByGroupName( void );
 
 static gboolean db_state_machine( FILE *dbfd );
-static gboolean countOfLinesAndColumnsFile(char *filename, unsigned long *lines, int *columns);
 
 /*************************************/
 gboolean DB_init_purim_db(char *filename)
@@ -508,7 +507,7 @@ static int personCompare(const void* a, const void* b)
 
 
 /*************************************************************************************/
-static gboolean countOfLinesAndColumnsFile(char *filename, unsigned long *lines, int *columns)
+gboolean countOfLinesAndColumnsFile(char *filename, unsigned long *lines, int *columns)
 {
     FILE* myfile = NULL;
     int ch;

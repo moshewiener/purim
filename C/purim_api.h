@@ -47,6 +47,7 @@ GtkWidget *create_listbox_in_scrollwin( GtkWidget **p_list_box,
                                         void *user_data );
 void remove_all_rows_of_listbox( GtkWidget *listbox );
 void fill_listbox_with_persons( GtkWidget *listBox );
+gboolean countOfLinesAndColumnsFile(char *filename, unsigned long *lines, int *columns);
 
 /* Message boxes */
 void show_about_window (GtkWindow *parent, gchar *message);
@@ -97,6 +98,7 @@ void databox_request_service( databoxreq req );
 
 gboolean CALC_calculate_shipments( void );
 gboolean CALC_save_shipments(char *filename, char **errmsg);
+gboolean CALC_load_shipments(char *filename, char **errmsg);
 void CALC_debug_print_shipments( void );
 
 /* widgets show states functions */
