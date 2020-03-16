@@ -39,12 +39,25 @@ static giverstruct *givingToArray[MAX_PUPULATION] = { NULL };
 static receiverstruct *receivingFromArray[MAX_PUPULATION] = { NULL };
 static unsigned long giversNum = 0;
 static unsigned long familiesNum = 0;
+static gboolean is_shipments_data_loaded = FALSE;
 
 static void free_calculations( void );
 static int groupnumCompare(const void* p_index_a, const void* p_index_b);
 static int familyNumberCompare(const void* a, const void* b);
 static unsigned long maxMembersOfGroup( int *giversGroupArray, unsigned long giversNum);
 static gboolean calc_state_machine( FILE *dbfd, char *p_msg );
+
+/************************************/
+gboolean CALC_is_data_loaded( void )
+{
+    if ((givingToArray[0] == NULL)      ||
+        (receivingFromArray[0] == NULL) ||
+        (giversNum == 0)                ||
+        (familiesNum == 0)              ||
+        (is_shipments_data_loaded == FALSE))
+        return FALSE;
+    return TRUE;
+}
 
 /************************************/
 gboolean CALC_calculate_shipments( void )
@@ -89,7 +102,8 @@ gboolean CALC_calculate_shipments( void )
     int *freeLocations, *randomLocations;
     int groupNum, shipment, shipmentsNum, extraNum;
     unsigned long randNum;
-    
+
+    is_shipments_data_loaded = FALSE;
     familiesNum = DB_get_persons_num();
     shipmentsNum = DB_get_shipments_num();
     if (familiesNum <= shipmentsNum)
@@ -207,7 +221,8 @@ gboolean CALC_calculate_shipments( void )
     free( giversGroupArray );
     free( freeLocations );
     free( randomLocations );
-    
+ 
+    is_shipments_data_loaded = TRUE;
     msgBoxSuccess( window, "רשימות המשלוחים חושבו בהצלחה");
     return TRUE;
 }
@@ -279,6 +294,7 @@ static void free_calculations( void )
         free( receivingFromArray[ index ] );
         receivingFromArray[ index ] = NULL;
     }
+    is_shipments_data_loaded = FALSE;
 }
 
 /***********************************************/
@@ -414,6 +430,7 @@ gboolean CALC_load_shipments(char *filename, char **errmsg)
     }
     
     /* free previous used resources */
+    is_shipments_data_loaded = FALSE;
     for (index = 0; index < MAX_PUPULATION; index++)
     {
         if (givingToArray[index] != NULL) { free( givingToArray[index] ); givingToArray[index] = NULL; }
@@ -439,6 +456,7 @@ gboolean CALC_load_shipments(char *filename, char **errmsg)
     if (calc_state_machine( dbfd, p_msg ) == FALSE) goto FAIL;
     
     fclose( dbfd );
+    is_shipments_data_loaded = TRUE;
     return TRUE;
     
 FAIL:

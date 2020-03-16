@@ -2,12 +2,12 @@
 
 /********************************************************
 states:
-    0-no file loaded            1-flie loaded
+    0-no file loaded            1-file loaded
     2-asked to add family       3-asked to del family
     4-asked to add group        5-asked to del group
     6-define num of shipments   7-asked to change family
     8-extra shipments           9-manual shipment
-    10-calculate
+    10-only shipments loaded
 *********************************************************/ 
 static gint state = 0;
 
@@ -68,6 +68,9 @@ void hideAll( void )
     gtk_widget_hide( btnSaveDbFile );
     gtk_widget_hide( btnExtra );
     gtk_widget_hide( btnManual );
+    gtk_widget_hide( btnCalculate );
+    gtk_widget_hide( btnSaveCalc );
+    gtk_widget_hide( btnLoadCalc );
     gtk_widget_hide( frame_listbox );
 }
 
@@ -96,17 +99,19 @@ void hideDataboxAll( void )
     gtk_widget_hide( listbox_Databox_3 ); 
     gtk_widget_hide( scale_Databox_shipments );
 }
+
 void go_state0( void )
 {
     /* Data not yet loaded */
     hideAll();
     gtk_widget_show( btnLoadDbFile );
-    gtk_widget_show ( btnNewDB );
+    gtk_widget_show( btnNewDB );
+    gtk_widget_show( btnLoadCalc );
 }
 
 void go_state1 ( void )
 {
-    /* After loading data. Main state */
+    /* After loading population data, while shipments data still not present. */
     if (Databox_window != NULL) gtk_widget_hide( Databox_window );
     gtk_widget_show_all( window );
     hideAll();
@@ -119,7 +124,8 @@ void go_state1 ( void )
     gtk_widget_show( btnSaveDbFile );
     gtk_widget_show( frame_listbox );
     gtk_widget_show( btnExtra );
-    gtk_widget_show( btnManual );
+    gtk_widget_show( btnLoadCalc );
+    gtk_widget_show( btnCalculate );
     gtk_label_set_text(labelMain, "נתוני התושבים נטענו בהצלחה. בחר פעולה");
 }
 
@@ -267,4 +273,67 @@ void go_state8 ( void )
     gtk_widget_show( label1_Databox_vbox2_1 );
     gtk_widget_show( label1_Databox_vbox2_2 );
     gtk_widget_show( label1_Databox_vbox2_3 );
+}
+
+void go_state10( void )
+{
+    /* Population data not yet loaded, shipments data loaded */
+    if (Databox_window != NULL) gtk_widget_hide( Databox_window );
+    gtk_widget_show_all( window );
+    hideAll();
+    gtk_widget_show( btnLoadDbFile );
+    gtk_widget_show( btnNewDB );
+    gtk_widget_show( btnLoadCalc );
+    gtk_widget_show( btnSaveCalc );
+    gtk_widget_show( btnManual );
+    gtk_label_set_text(labelMain, "נתוני המשלוחים נטענו בהצלחה. בחר פעולה");
+}
+
+void go_state11 ( void )
+{
+    /* Both population data and shipments data are loaded */
+    /* After loading population data, while shipments data still not present. */
+    if (Databox_window != NULL) gtk_widget_hide( Databox_window );
+    gtk_widget_show_all( window );
+    hideAll();
+    gtk_widget_show( btnAddFamily );
+    gtk_widget_show( btnDelFamily );
+    gtk_widget_show( btnChgangeFamily );
+    gtk_widget_show( btnShipmentsNum );
+    gtk_widget_show( btnAddGroup );
+    gtk_widget_show( btnDelGroup );
+    gtk_widget_show( btnSaveDbFile );
+    gtk_widget_show( frame_listbox );
+    gtk_widget_show( btnExtra );
+    gtk_widget_show( btnCalculate );
+    gtk_widget_show( btnLoadCalc );
+    gtk_widget_show( btnSaveCalc );
+    gtk_widget_show( btnManual );
+    gtk_label_set_text(labelMain, "נתוני התושבים והמשלוחים נטענו בהצלחה. בחר פעולה");
+}
+
+void go_main_state( void )
+{
+    /* choose the appropriate state depending whether the population data and shipments data are loaded. */
+    gboolean populationLoaded, shipmentsLoaded;
+
+    populationLoaded = DB_is_data_loaded();
+    shipmentsLoaded = CALC_is_data_loaded();
+#ifdef DEBUG 
+    g_print("%s: population data: %s. Shipments data: %s\n", __FUNCTION__,
+            (populationLoaded)? "TRUE":"FALSE", (shipmentsLoaded)? "TRUE":"FALSE");
+#endif
+    if (populationLoaded == FALSE)
+    {
+        if (shipmentsLoaded == FALSE)
+            go_state0();
+        else go_state10();
+    }
+    else
+    {
+        if (shipmentsLoaded == FALSE)
+            go_state1();
+        else go_state11();
+    }
+    
 }

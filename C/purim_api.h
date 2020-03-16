@@ -65,6 +65,7 @@ void css_set(GtkCssProvider *cssProvider, GtkWidget *g_widget);
 gboolean DB_init_purim_db(char *filename);
 gboolean DB_save_purim_db(char *filename);
 void DB_close_purim_db( void );
+gboolean DB_is_data_loaded( void );
 unsigned long DB_get_persons_num( void );
 unsigned long DB_get_givers_num( void );
 int DB_get_shipments_num( void );
@@ -99,17 +100,21 @@ void databox_request_service( databoxreq req );
 gboolean CALC_calculate_shipments( void );
 gboolean CALC_save_shipments(char *filename, char **errmsg);
 gboolean CALC_load_shipments(char *filename, char **errmsg);
+gboolean CALC_is_data_loaded( void );
 void CALC_debug_print_shipments( void );
 
 /* widgets show states functions */
 void hideAll( void );
-void go_state0( void ); // data not yet loaded
-void go_state1( void ); // main screen after data was loaded
+void go_state0( void ); // no population nor shipments data is yet loaded
+void go_state1( void ); // main screen after data was loaded but shipments not yet calculated
 void go_state2( void ); //add family
 void go_state3( void ); //delete family
-void go_state4( void ); //add groupo
+void go_state4( void ); //add group
 void go_state5( void ); //delete group
 void go_state6( void ); // set shipments number
 void go_state7( void ); // changfe family
 void go_state8( void ); // extra shipments
+void go_state10( void ); //population data not loaded, shipments data loaded
+void go_state11( void ); //both population data and shipments data are loaded
+void go_main_state( void ); //choose between states 0,1,10,11
 #endif /* __PURIM_API_H__ */

@@ -29,6 +29,7 @@ static int db_shipments_num = 0;
 static int db_groups_num = 0;
 static db_state state = DB_S_INIT;
 static FILE *dbfd = NULL;
+static gboolean db_data_loaded = FALSE;
 static String32 db_groupnames[MAX_GROUPS_NUM];
 static int personCompare(const void* a, const void* b);
 static void setGroupNumByGroupName( void );
@@ -40,9 +41,10 @@ gboolean DB_init_purim_db(char *filename)
 {
     int columns;
     
-    
+#ifdef DEBUG    
     g_print("%s: filename=%s\n", __FUNCTION__, (filename==NULL)? "<NULL>" : filename);
-    
+#endif
+    db_data_loaded = FALSE;
     if (filename == NULL)
     { // Initialize a minimal default database
         if (p_person_records != NULL)
@@ -61,6 +63,7 @@ gboolean DB_init_purim_db(char *filename)
         db_persons_count = 1;
         db_groups_num = 1;
         db_shipments_num = 2;
+        db_data_loaded = TRUE;
         return TRUE;
     }
     if (countOfLinesAndColumnsFile(filename, &db_persons_count, &columns) == FALSE) 
@@ -83,7 +86,7 @@ gboolean DB_init_purim_db(char *filename)
     fclose( dbfd );
     dbfd = NULL;
     setGroupNumByGroupName();
-    
+    db_data_loaded = TRUE;
     return TRUE;
 FAIL:
     if (dbfd != NULL)
@@ -96,6 +99,17 @@ FAIL:
     db_persons_count = 0;
     state = DB_S_INIT;
     return FALSE;
+}
+
+/********************************************/
+gboolean DB_is_data_loaded( void )
+{
+    if ((p_person_records == NULL)  ||
+        (db_persons_count == 0)     ||
+        (db_groups_num == 0)        ||
+        (db_data_loaded == FALSE))
+        return FALSE;
+    return TRUE;
 }
 
 /********************************************/
@@ -149,6 +163,7 @@ void DB_close_purim_db( void )
     db_persons_count = 0;
     db_shipments_num = 0;
     db_groups_num = 0;
+    db_data_loaded = FALSE;
     db_state state = DB_S_INIT;
 }
 
@@ -564,9 +579,9 @@ static gboolean db_state_machine( FILE *dbfd )
     fseek(dbfd, 0L, SEEK_END);
     filesize = ftell(dbfd);
     fseek(dbfd, 0L, SEEK_SET);
-    
+#ifdef DEBUG
     g_print("%s filesize=%lu...\n", __FUNCTION__, filesize);
-    
+#endif
     if (filesize <=0) return FALSE;
     lineNum = 0; chrIndex=0;
     db_groups_num=0;
@@ -590,7 +605,10 @@ static gboolean db_state_machine( FILE *dbfd )
                 {
                     // If the last line of the file ends with a NEWLINE char then we'll get here
                     if (lineNum > 0)
+                    {
+                        db_data_loaded = TRUE;
                         return TRUE;
+                    }
                     g_print("Error csv db: End Of File at line %d\n", lineNum+1);
                     return FALSE;
                 }
@@ -778,6 +796,7 @@ static gboolean db_state_machine( FILE *dbfd )
                         if (tmpExtra >= 0) extraNum++;
                     }
                     p_person_records[lineNum].extrashipments = extraNum;
+                    db_data_loaded = TRUE;
                     return TRUE;
                 }
                 else // normal char

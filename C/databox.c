@@ -44,7 +44,7 @@ void  callback_databox_window_destroy (GtkWidget *widget, gint wiunId)
     gtk_entry_set_text( entry_Databox_2, "" );
     if (givers_list != NULL) { free(givers_list); givers_list = NULL; }
     if (nonGivers_list != NULL) { free(nonGivers_list); nonGivers_list = NULL; }
-    go_state1();
+    go_main_state();
 }
 /***********************************************************/
 
@@ -57,7 +57,7 @@ void  callback_databox_quit_button_clicked (GtkWidget *widget, gint windowId)
     gtk_widget_hide ( Databox_window );
     gtk_entry_set_text( entry_Databox_1, "" );
     gtk_entry_set_text( entry_Databox_2, "" );
-    go_state1();
+    go_main_state();
 }
 
 /***********************************************************/
@@ -111,7 +111,7 @@ static void callback_databox_add_family_button_clicked (GtkWidget *widget, gint 
     }
     gtk_widget_hide ( Databox_window );
     gtk_widget_show_all( window );
-    go_state1();
+    go_main_state();
 }
 
 /***********************************************************/
@@ -135,7 +135,7 @@ static void callback_databox_save_changes_button_clicked (GtkWidget *widget, gin
         /* Hide second and show main window */
         gtk_widget_hide ( Databox_window );
         gtk_widget_show_all( window );    
-        go_state1();
+        go_main_state();
         return;
     }
     else if (*p_req == DATABOX_REQ_EXTRA)
@@ -161,7 +161,7 @@ static void callback_databox_save_changes_button_clicked (GtkWidget *widget, gin
         }
         gtk_widget_hide ( Databox_window );
         gtk_widget_show_all( window );
-        go_state1();
+        go_main_state();
     }
 }
 
@@ -218,7 +218,7 @@ void callback_databox_add_group_button_clicked (GtkWidget *widget, gint windowId
 TAIL:
     gtk_widget_hide ( Databox_window );
     gtk_widget_show_all( window );
-    go_state1();
+    go_main_state();
 }
 
 /***********************************************************/
@@ -245,7 +245,7 @@ void callback_databox_del_group_button_clicked (GtkWidget *widget, gint windowId
 TAIL:
     gtk_widget_hide ( Databox_window );
     gtk_widget_show_all( window );
-    go_state1();
+    go_main_state();
 }
 
 /********************************************************/
@@ -254,7 +254,7 @@ void callback_databox_shipments_num_button_clicked(GtkWidget *widget, gint windo
     DB_set_shipments_num( gtk_range_get_value( scale_Databox_shipments ));
     gtk_widget_hide ( Databox_window );
     gtk_widget_show_all( window );
-    go_state1();
+    go_main_state();
 }
 
 /********************************************************/

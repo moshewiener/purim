@@ -21,7 +21,6 @@ typedef struct button_data {
 #define MAX_BUTTONS_IN_FRAME 12
 
 static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer user_data);
-gboolean listbox_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean newDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean help_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean add_family_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
@@ -63,7 +62,9 @@ gboolean callback_button_pressed_about(GtkWidget *widget, GdkEvent  *event, gpoi
     g_print("About button pressed\n");
     sprintf(msg,"%s\n%s : %s","פרויקט משלוחי מנות טלמון", " גירסא ", Version);
     show_about_window(window, msg);
+#ifdef DEBUG
     g_print ("back from About dialog\n");
+#endif
     return TRUE;
 }
 
@@ -75,12 +76,14 @@ static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gpointer
     
     child = gtk_bin_get_child(GTK_BIN(row));
     if (GTK_IS_LABEL(child) != TRUE)
-        printf("ERROR!\n");
+        g_print("%s: ERROR!\n", __FUNCTION__);
     else
     {
         labeltext = gtk_label_get_text((GtkLabel*)child);
+#ifdef DEBUG        
         printf("Row selected %d: Text=%s\n", gtk_list_box_row_get_index(row), labeltext);
         g_print("box %p list_box %p...\n", (void*)box, (void*)list_box);
+#endif
     }
     
 }
@@ -91,21 +94,6 @@ gint CloseAppWindow_callback (GtkWidget *widget, gpointer *data)
     gtk_main_quit ();
     
     return (FALSE);
-}
-
-gboolean listbox_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
-{
-    GtkListBoxRow *row;
-    
-    row = gtk_list_box_get_selected_row (list_box);
-    printf("Listbox button pressed: selected row %d\n", gtk_list_box_row_get_index(row));
-    #if 1  
-    if (gtk_widget_is_visible( btnAddFamily ) == TRUE)
-        gtk_widget_hide( btnAddFamily );
-    else
-        gtk_widget_show( btnAddFamily );
-    #endif
-    return TRUE;
 }
 
 gboolean openfile_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
@@ -143,7 +131,7 @@ gboolean openfile_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, g
     }
     
     gtk_widget_destroy (dialog);
-    go_state1();
+    go_main_state();
     return TRUE;
 }
 
@@ -182,7 +170,7 @@ static gboolean saveDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *eve
     }
     
     gtk_widget_destroy (dialog);
-    go_state1();
+    go_main_state();
     return TRUE;
 }
 
@@ -226,7 +214,7 @@ static gboolean save_shipments_button_pressed_callback(GtkWidget *widget, GdkEve
     else
         msgBoxError( window, (errmsg == NULL)? "נכשל נסיון לשמור משלוחים" : errmsg );
     if (errmsg != NULL) free( errmsg );
-    go_state1();
+    go_main_state();
     return TRUE;
 }
 
@@ -266,19 +254,25 @@ static gboolean load_shipments_button_pressed_callback(GtkWidget *widget, GdkEve
     
     gtk_widget_destroy (dialog);
     if (result == TRUE)
-        msgBoxSuccess( window, "רשימות המשלוחים נטען בהצלחה");
+        msgBoxSuccess( window, "רשימות המשלוחים נטענו בהצלחה");
     else
         msgBoxError( window, (errmsg == NULL)? "נכשל נסיון לטעון משלוחים" : errmsg );
     if (errmsg != NULL) free( errmsg );
-    go_state1();
+    go_main_state();
     return TRUE;
 }
 
 /*---------------------------------------------------------*/
 gboolean calculate_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
 {
+    gboolean result;
+    
+#ifdef DEBUG
     g_print("Calling calculate_shipments...\n");
-    return (CALC_calculate_shipments());
+#endif
+    result = CALC_calculate_shipments();
+    go_main_state();
+    return result;
 }
 
 /*---------------------------------------------------------*/
@@ -312,8 +306,6 @@ gboolean help_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpoin
            DB_get_persons_num(), DB_get_givers_num(), DB_get_shipments_num());
 
     CALC_debug_print_shipments();
-    g_print("Saving shipments...\n");
-    CALC_save_shipments("./nofile.csv", NULL);
     
     return TRUE;
 }
@@ -323,7 +315,7 @@ gboolean newDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpoi
 {
     DB_init_purim_db( NULL );
     fill_listbox_with_persons( list_box );
-    go_state1();
+    go_main_state();
     return TRUE;
 }
 
@@ -392,7 +384,7 @@ gboolean loadDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpo
     else
     {
         fill_listbox_with_persons( list_box );
-        go_state1();
+        go_main_state();
     }
     return TRUE;
 }
