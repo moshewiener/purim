@@ -12,7 +12,8 @@ typedef enum {
     DATABOX_REQ_ADDGROUP,
     DATABOX_REQ_DELGROUP,
     DATABOX_REQ_SHIPMENTSNUM,
-    DATABOX_REQ_EXTRA
+    DATABOX_REQ_EXTRA,
+    DATABOX_REQ_MANUAL
 } databoxreq;
 
 #define MAX_GROUPS_NUM      12
@@ -100,6 +101,9 @@ void databox_request_service( databoxreq req );
 gboolean CALC_calculate_shipments( void );
 gboolean CALC_save_shipments(char *filename, char **errmsg);
 gboolean CALC_load_shipments(char *filename, char **errmsg);
+long CALC_get_receivers_num( void );
+long CALC_get_giver_shipment( unsigned long personNum, int shipmentNum );
+gboolean CALC_manual_change_shipments( void );
 gboolean CALC_is_data_loaded( void );
 void CALC_debug_print_shipments( void );
 
@@ -114,6 +118,7 @@ void go_state5( void ); //delete group
 void go_state6( void ); // set shipments number
 void go_state7( void ); // changfe family
 void go_state8( void ); // extra shipments
+void go_state9( void ); // manually change shipments
 void go_state10( void ); //population data not loaded, shipments data loaded
 void go_state11( void ); //both population data and shipments data are loaded
 void go_main_state( void ); //choose between states 0,1,10,11

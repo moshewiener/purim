@@ -275,6 +275,31 @@ void go_state8 ( void )
     gtk_widget_show( label1_Databox_vbox2_3 );
 }
 
+void go_state9 ( void )
+/* Manually change shipments */
+{
+    databox_request_service( DATABOX_REQ_MANUAL );
+    gtk_widget_hide( window );
+    gtk_widget_show_all( Databox_window );
+    hideDataboxAll();
+    gtk_label_set_text( label1_Databox_hbox1, "שינוי ידני של המשלוחים");
+    gtk_label_set_text( label1_Databox_vbox2_1, "מקבלי המשלוח");
+    gtk_label_set_text( label1_Databox_vbox2_2, "רשימת המשפחות המקבלות" );
+    gtk_label_set_text( label1_Databox_vbox2_3, "רשימת המשפחות הנותנות" );
+    gtk_widget_show ( Databox_window );
+    gtk_widget_show ( label1_Databox_hbox1 );
+    gtk_widget_show( btn_Databox_save_changes );
+    gtk_widget_show( btn_Databox_quit );
+    gtk_widget_show( btn_Databox_add_to_list );
+    gtk_widget_show( btn_Databox_remove_from_list );
+    gtk_widget_show( listbox_Databox_1 );
+    gtk_widget_show( listbox_Databox_2 );
+    gtk_widget_show( listbox_Databox_3 );
+    gtk_widget_show( label1_Databox_vbox2_1 );
+    gtk_widget_show( label1_Databox_vbox2_2 );
+    gtk_widget_show( label1_Databox_vbox2_3 );
+}
+
 void go_state10( void )
 {
     /* Population data not yet loaded, shipments data loaded */

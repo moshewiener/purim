@@ -44,6 +44,7 @@ static gboolean is_shipments_data_loaded = FALSE;
 static void free_calculations( void );
 static int groupnumCompare(const void* p_index_a, const void* p_index_b);
 static int familyNumberCompare(const void* a, const void* b);
+static long find_giver_index( unsigned long personNum );
 static unsigned long maxMembersOfGroup( int *giversGroupArray, unsigned long giversNum);
 static gboolean calc_state_machine( FILE *dbfd, char *p_msg );
 
@@ -225,6 +226,45 @@ gboolean CALC_calculate_shipments( void )
     is_shipments_data_loaded = TRUE;
     msgBoxSuccess( window, "רשימות המשלוחים חושבו בהצלחה");
     return TRUE;
+}
+
+/********************************************************/
+long CALC_get_giver_shipment( unsigned long personNum, int shipmentNum )
+{
+    long giverIndex;
+    
+    if (is_shipments_data_loaded == FALSE) return (-1);
+    if (personNum >= familiesNum) return (-1);
+    giverIndex = find_giver_index( personNum );
+    if (giverIndex == (-1)) return (-1);
+    if (givingToArray[giverIndex] == NULL) return (-1);
+    if (shipmentNum >= givingToArray[giverIndex]->shipmentsnum) return (-1);
+    return givingToArray[giverIndex]->shipment[shipmentNum];
+}
+
+/********************************************************/
+long CALC_get_receivers_num( void )
+{
+    if (is_shipments_data_loaded == FALSE) return (-1);
+    if (familiesNum < 1) return (-1);
+    if (receivingFromArray[0] == NULL) return (-1);
+    return familiesNum;
+}
+
+/*****************************************************/
+static long find_giver_index( unsigned long personNum )
+{
+    unsigned long index;
+    
+    if (is_shipments_data_loaded == FALSE) return (-1);
+    if (familiesNum < 1) return (-1);
+    if (giversNum < 1) return (-1);
+    for (index = 0; index < giversNum; index++)
+    {
+        if (givingToArray[index]->familynum == personNum)
+            return (long)index;
+    }
+    return (-1);
 }
 
 /*********************************************************************************/

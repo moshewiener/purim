@@ -33,6 +33,7 @@ gboolean calculate_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, 
 static gboolean saveDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 static gboolean save_shipments_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 static gboolean load_shipments_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
+static gboolean manual_chg_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 
 static void set_button_attributes(button_data *btn, gint colour, gint backcolour, gchar *title);
 static void add_toolbar_to_box( GtkWidget *box );
@@ -273,6 +274,13 @@ gboolean calculate_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, 
     result = CALC_calculate_shipments();
     go_main_state();
     return result;
+}
+
+/*---------------------------------------------------------*/
+gboolean manual_chg_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+{
+    go_state9();
+    return TRUE;
 }
 
 /*---------------------------------------------------------*/
@@ -727,6 +735,7 @@ int main( int argc, char *argv[] )
     g_signal_connect (btnCalculate, "button-press-event", G_CALLBACK (calculate_button_pressed_callback), NULL);
     g_signal_connect (btnSaveCalc, "button-press-event", G_CALLBACK (save_shipments_button_pressed_callback), NULL);
     g_signal_connect (btnLoadCalc, "button-press-event", G_CALLBACK (load_shipments_button_pressed_callback), NULL);
+    g_signal_connect (btnManual, "button-press-event", G_CALLBACK (manual_chg_button_pressed_callback), NULL);
     // Expand argument is true, so fill in all the extra space in the box, and the
     //fill argument is also true, so he extra space is allocated to the objects themselves 
     gtk_box_pack_start (GTK_BOX (main_hbox), frame_vert, TRUE, TRUE, 10);

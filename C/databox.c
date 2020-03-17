@@ -19,10 +19,12 @@ static databoxreq request;
 static unsigned long *givers_list = NULL;
 static unsigned long *nonGivers_list = NULL;
 static long extra_shipments[MAX_EXTRA_SHIPMENTS];
+static long shipments[MAX_SHIPMENTS + MAX_EXTRA_SHIPMENTS];
 
 static void callback_destroy_row (GtkWidget *row, GtkWidget *listbox);
 static gint listBoxSortRows (GtkListBoxRow *row1, GtkListBoxRow *row2, gpointer user_data);
 static void fill_listboxes_for_req_extra( void );
+static void fill_listboxes_for_req_manual( void );
 static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gint *p_req);
 static void callback_databox_add_family_button_clicked (GtkWidget *widget, gint windowId);
 static void callback_databox_save_changes_button_clicked(GtkWidget *widget, gint *p_req);
@@ -348,7 +350,8 @@ static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gint *p_
     gboolean isFree;
     int groupNum;
     unsigned long personNum, persons, receiver;
-    int extraShipmentsNum, extraIndex;
+    int extraShipmentsNum, extraIndex, shipmentIndex;
+    long shipmentReceiver;
     char *firstname, *surname;
     GtkWidget *extralist_row, *label;
     char familyname[96];
@@ -400,6 +403,35 @@ static void row_selected_callback (GtkListBox *box, GtkListBoxRow *row, gint *p_
             }
             gtk_widget_show_all( listbox_Databox_1 );
         } // DATABOX_REQ_EXTRA
+        else if (*p_req == DATABOX_REQ_MANUAL)
+        {
+            remove_all_rows_of_listbox( listbox_Databox_1 );
+            persons = CALC_get_receivers_num();
+            personNum = gtk_list_box_row_get_index(row);
+            if (personNum >= persons) return;
+
+            for (shipmentIndex=0; shipmentIndex < (MAX_SHIPMENTS + MAX_EXTRA_SHIPMENTS); shipmentIndex++)
+            {
+                shipmentReceiver = CALC_get_giver_shipment( personNum, shipmentIndex );
+                if (shipmentReceiver >= 0)
+                {
+                    shipments[shipmentIndex] = shipmentReceiver;
+                    firstname = DB_get_firstname( shipmentReceiver );
+                    surname = DB_get_surname( shipmentReceiver );
+                    if ((firstname != NULL) && (surname != NULL))
+                        sprintf(familyname, "%s %s", surname, firstname);
+                    else
+                        sprintf(familyname, "%s %d", "משפחה מספר ", shipmentReceiver);
+                    extralist_row = gtk_list_box_row_new();
+                    label = gtk_label_new( familyname );
+                    gtk_label_set_xalign( label, 1.0); // right alignment
+                    gtk_container_add (GTK_CONTAINER (extralist_row), label);
+                    gtk_container_add (GTK_CONTAINER (listbox_Databox_1), extralist_row);
+                }
+                else shipments[shipmentIndex] = (-1);
+            }
+            gtk_widget_show_all( listbox_Databox_1 );
+        } // DATABOX_REQ_MANUAL
     } // listbox_Databox_3
 }
 
@@ -542,6 +574,10 @@ void databox_request_service( databoxreq req )
     {
         fill_listboxes_for_req_extra();
     }
+    else if (request == DATABOX_REQ_MANUAL)
+    {
+        fill_listboxes_for_req_manual();
+    }
 }
 
 /********************************************************/
@@ -597,6 +633,46 @@ static void fill_listboxes_for_req_extra( void )
     //select the 1st row in non-givers listbox
     if (nonGiversNum > 0)
         gtk_list_box_select_row (listbox_Databox_2, gtk_list_box_get_row_at_index( listbox_Databox_2 , 0 ));
+}
+
+/********************************************************/
+static void fill_listboxes_for_req_manual( void )
+{
+    unsigned long personsNumber, personIndex;
+    char *firstname, *surname;
+    char familyname[96];
+    GtkWidget *row2, *row3, *label2, *label3;
+    
+    personsNumber = CALC_get_receivers_num();
+    if (personsNumber < 1) return;
+    
+    for (personIndex = 0; personIndex < personsNumber; personIndex++)
+    {
+        firstname = DB_get_firstname( personIndex );
+        surname = DB_get_surname( personIndex );
+        if ((firstname != NULL) && (surname != NULL))
+            sprintf(familyname, "%s %s", surname, firstname);
+        else
+            sprintf(familyname, "%s %d", "משפחה מספר ", personIndex);
+        row2 = gtk_list_box_row_new();
+        label2 = gtk_label_new( familyname );
+        row3 = gtk_list_box_row_new();
+        label3 = gtk_label_new( familyname );
+        gtk_label_set_xalign( label2, 1.0); // right alignment
+        gtk_label_set_xalign( label3, 1.0); 
+        gtk_container_add (GTK_CONTAINER (row2), label2);
+        gtk_container_add (GTK_CONTAINER (row3), label3);
+        gtk_container_add (GTK_CONTAINER (listbox_Databox_2), row2);
+        gtk_container_add (GTK_CONTAINER (listbox_Databox_3), row3);
+    }
+    
+    if (personsNumber > 0)
+    {
+        //select the 1st row in givers listbox
+        gtk_list_box_select_row (listbox_Databox_3, gtk_list_box_get_row_at_index( listbox_Databox_3 , 0 ));
+        //select the 1st row in receiving listbox
+        gtk_list_box_select_row (listbox_Databox_2, gtk_list_box_get_row_at_index( listbox_Databox_2 , 0 ));
+    }
 }
 
 /***************************************/
