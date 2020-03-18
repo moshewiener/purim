@@ -124,7 +124,7 @@ static void callback_databox_save_changes_button_clicked (GtkWidget *widget, gin
     gboolean isFree;
     GtkWidget *row;
     unsigned long giverIndex;
-    int extraNum, extraIndex;
+    int extraNum, extraIndex, shipmentsNum;
   
     if ( *p_req == DATABOX_REQ_CHGFAMILY )
     { /* Save Button was clicked when handling Change Family request. */
@@ -165,6 +165,17 @@ static void callback_databox_save_changes_button_clicked (GtkWidget *widget, gin
         gtk_widget_show_all( window );
         go_main_state();
     }
+    else if (*p_req == DATABOX_REQ_MANUAL)
+    {
+        // find out how many shipments this person does
+        for (shipmentsNum=0; shipmentsNum < (MAX_SHIPMENTS + MAX_EXTRA_SHIPMENTS); shipmentsNum++)
+            if (shipments[shipmentsNum] < 0) break;
+        personNum = gtk_list_box_row_get_index( gtk_list_box_get_selected_row((GtkListBox*)listbox_Databox_3) );
+        CALC_manual_change_shipments( personNum, shipmentsNum, shipments );
+        gtk_widget_hide ( Databox_window );
+        gtk_widget_show_all( window );
+        go_main_state();
+    } // DATABOX_REQ_MANUAL
 }
 
 /***********************************************************/
@@ -886,21 +897,21 @@ gboolean create_databox_window( char *title )
 
         /* connect callbacks to signals */        
         g_signal_connect (G_OBJECT (Databox_window), "destroy", 
-                          G_CALLBACK (callback_databox_window_destroy), 2);
+                          G_CALLBACK (callback_databox_window_destroy), NULL);
         g_signal_connect (G_OBJECT (btn_Databox_quit), "clicked", 
-                          G_CALLBACK (callback_databox_quit_button_clicked), 2);
+                          G_CALLBACK (callback_databox_quit_button_clicked), NULL);
         g_signal_connect (G_OBJECT (btn_Databox_add_family), "clicked", 
-                          G_CALLBACK (callback_databox_add_family_button_clicked), 2);
+                          G_CALLBACK (callback_databox_add_family_button_clicked), NULL);
         g_signal_connect (G_OBJECT (btn_Databox_save_changes), "clicked", 
                           G_CALLBACK (callback_databox_save_changes_button_clicked), (void*)(&request));
         g_signal_connect (G_OBJECT (btn_Databox_del_family), "clicked", 
-                          G_CALLBACK (callback_databox_del_family_button_clicked), 2);
+                          G_CALLBACK (callback_databox_del_family_button_clicked), NULL);
         g_signal_connect (G_OBJECT (btn_Databox_add_group), "clicked", 
-                          G_CALLBACK (callback_databox_add_group_button_clicked), 2);
+                          G_CALLBACK (callback_databox_add_group_button_clicked), NULL);
         g_signal_connect (G_OBJECT (btn_Databox_del_group), "clicked", 
-                          G_CALLBACK (callback_databox_del_group_button_clicked), 2);
+                          G_CALLBACK (callback_databox_del_group_button_clicked), NULL);
         g_signal_connect (G_OBJECT (btn_Databox_save_shipments_num), "clicked", 
-                          G_CALLBACK (callback_databox_shipments_num_button_clicked), 2);
+                          G_CALLBACK (callback_databox_shipments_num_button_clicked), NULL);
         g_signal_connect (G_OBJECT (btn_Databox_add_to_list), "clicked", 
                           G_CALLBACK (callback_databox_add_extra_button_clicked), (void*)(&request));
         g_signal_connect (G_OBJECT (btn_Databox_remove_from_list), "clicked", 

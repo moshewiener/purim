@@ -103,7 +103,7 @@ gboolean CALC_save_shipments(char *filename, char **errmsg);
 gboolean CALC_load_shipments(char *filename, char **errmsg);
 long CALC_get_receivers_num( void );
 long CALC_get_giver_shipment( unsigned long personNum, int shipmentNum );
-gboolean CALC_manual_change_shipments( void );
+gboolean CALC_manual_change_shipments( unsigned long personNum, int shipmentsNum, unsigned long *shipmentsArray );
 gboolean CALC_is_data_loaded( void );
 void CALC_debug_print_shipments( void );
 

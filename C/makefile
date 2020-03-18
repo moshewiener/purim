@@ -5,7 +5,7 @@ CC = gcc
 CFILES = main.c about.c css.c purimUtil.c csv.c databox.c calculate.c msgbox.c
 TARGET = purim
 INCLUDES = -I .
-PROJ_VERSION = "\"2.0\""
+PROJ_VERSION = "\"2.1\""
 MAX_PUPULATION = 2500
 
 all: $(CFILES)

@@ -45,6 +45,11 @@ static void free_calculations( void );
 static int groupnumCompare(const void* p_index_a, const void* p_index_b);
 static int familyNumberCompare(const void* a, const void* b);
 static long find_giver_index( unsigned long personNum );
+static gboolean remove_shipment_from_receiver( unsigned long sender, unsigned long receiver );
+static gboolean remove_giver( unsigned long personNum );
+static gboolean add_giver( unsigned long personNum );
+static gboolean clear_giver_shipments( unsigned long personNum );
+static gboolean add_giver_shipment( unsigned long personNum, unsigned long receiver );
 static unsigned long maxMembersOfGroup( int *giversGroupArray, unsigned long giversNum);
 static gboolean calc_state_machine( FILE *dbfd, char *p_msg );
 
@@ -251,6 +256,40 @@ long CALC_get_receivers_num( void )
     return familiesNum;
 }
 
+/*************************************************************/
+gboolean CALC_manual_change_shipments( unsigned long personNum, int shipmentsNum, unsigned long *shipmentsArray )
+{
+    long giverIndex;
+    int shipmentIndex;
+    
+    if (is_shipments_data_loaded == FALSE) return FALSE;
+    if ((familiesNum < 1) || (personNum >= familiesNum)) return FALSE;
+    if (receivingFromArray[0] == NULL) return FALSE;
+    giverIndex = find_giver_index( personNum );
+    
+    if (giverIndex < 0)
+    { // this person was not a giver
+        // if this person was not a giver, and now it has 0 shipments then no change has occured
+        if  (shipmentsNum == 0) return TRUE;
+        // this person was not a giver. Now he becomes one
+        add_giver( personNum );
+        for (shipmentIndex = 0; shipmentIndex < shipmentsNum; shipmentIndex++)
+            add_giver_shipment( personNum, shipmentsArray[shipmentIndex] );
+    }
+    else
+    { // this person was a giver 
+        if  (shipmentsNum == 0) // this person was a giver and now he isn't
+            remove_giver( personNum );
+        else
+        { // was a giver, still a giver. Update shipments list
+            clear_giver_shipments( personNum );
+            for (shipmentIndex = 0; shipmentIndex < shipmentsNum; shipmentIndex++)
+                add_giver_shipment( personNum, shipmentsArray[shipmentIndex] );
+        }
+    }
+    return TRUE;
+}
+
 /*****************************************************/
 static long find_giver_index( unsigned long personNum )
 {
@@ -265,6 +304,112 @@ static long find_giver_index( unsigned long personNum )
             return (long)index;
     }
     return (-1);
+}
+
+/******************************************************/
+static gboolean remove_shipment_from_receiver( unsigned long sender, unsigned long receiver )
+{
+    int shipmentIndex, shipmentsNum, index;
+    
+    shipmentsNum = receivingFromArray[receiver]->shipmentsnum;
+    // find the sender in the receiver shipments list
+    for (shipmentIndex=0; shipmentIndex < shipmentsNum; shipmentIndex++)
+    {
+        if (receivingFromArray[receiver]->shipment[shipmentIndex] == sender)
+            break;
+    }
+    for (index = shipmentIndex; index < (shipmentsNum-1); index++)
+        receivingFromArray[receiver]->shipment[index] = receivingFromArray[receiver]->shipment[index + 1];
+    receivingFromArray[receiver]->shipment[shipmentsNum-1]  = (-1);
+    receivingFromArray[receiver]->shipmentsnum--;
+    return TRUE;
+}
+
+/******************************************************/
+static gboolean remove_giver( unsigned long personNum )
+{
+    unsigned long giverIndex, receiver, index;
+    int shipmentsNum, shipmentIndex;
+    
+    giverIndex = find_giver_index( personNum );
+    shipmentsNum = givingToArray[giverIndex]->shipmentsnum;
+    for (shipmentIndex = 0; shipmentIndex < shipmentsNum; shipmentIndex++)
+    {
+        receiver = givingToArray[giverIndex]->shipment[shipmentIndex];
+        remove_shipment_from_receiver( personNum, receiver );
+    }
+    // remove giver from givers array
+    free( givingToArray[giverIndex] );
+    for (index = giverIndex; index < (giversNum-1); index++)
+        givingToArray[index] = givingToArray[index + 1];
+    givingToArray[giversNum-1] = NULL;
+    giversNum--;
+
+    return TRUE;
+}
+
+/******************************************************/
+static gboolean add_giver( unsigned long personNum )
+{
+    unsigned long giverIndex, index;
+    
+    if ((giversNum >= MAX_PUPULATION) || (personNum >= MAX_PUPULATION)) return FALSE;
+    // find the location in where to add the new giver
+    for (giverIndex = 0; giverIndex < giversNum; giverIndex++)
+        if (givingToArray[giverIndex]->familynum > personNum) break;
+    // allocate memory for the new giver at the end of the list
+    givingToArray[giversNum] = malloc(sizeof(givingToArray[0]));
+    // push forward all the givers that come after the position of thye new giver
+    for (index = giversNum; index > giverIndex; index--)
+    {
+        memcpy(givingToArray[index] ,givingToArray[index-1], sizeof(givingToArray[0]));
+    }
+    // set the new giver entry
+    givingToArray[giverIndex]->familynum = personNum;
+    givingToArray[giverIndex]->shipmentsnum = 0;
+    giversNum++;
+    return TRUE;
+}
+
+/*****************************************************/
+static gboolean clear_giver_shipments( unsigned long personNum )
+{
+    int shipmentsNum, shipmentIndex;
+    long giverIndex;
+    unsigned long receiver;
+    
+    if (personNum >= MAX_PUPULATION) return FALSE;
+    giverIndex = find_giver_index( personNum );
+    if (giverIndex < 0) return FALSE;
+    shipmentsNum = givingToArray[giverIndex]->shipmentsnum;
+    if (shipmentsNum < 1) return TRUE;
+    for (shipmentIndex = 0; shipmentIndex < shipmentsNum; shipmentIndex++)
+    {
+        receiver = givingToArray[giverIndex]->shipment[shipmentIndex];
+        remove_shipment_from_receiver( personNum, receiver );
+    }
+    givingToArray[giverIndex]->shipmentsnum = 0;
+    return TRUE;
+}
+
+/*****************************************************/
+static gboolean add_giver_shipment( unsigned long personNum, unsigned long receiver )
+{
+    int shipmentsNum, recvShipments;
+    long giverIndex;
+    
+    if ((personNum >= MAX_PUPULATION) || (receiver >= MAX_PUPULATION)) return FALSE;
+    giverIndex = find_giver_index( personNum );
+    if (giverIndex < 0) return FALSE;
+    shipmentsNum = givingToArray[giverIndex]->shipmentsnum;
+    if (shipmentsNum >= (MAX_SHIPMENTS + MAX_EXTRA_SHIPMENTS)) return FALSE;
+    recvShipments = receivingFromArray[receiver]->shipmentsnum;
+    if (recvShipments >= MAX_SHIPMENTS) return FALSE;
+    givingToArray[giverIndex]->shipment[shipmentsNum] = receiver;
+    givingToArray[giverIndex]->shipmentsnum++;
+    receivingFromArray[receiver]->shipment[recvShipments] = personNum;
+    receivingFromArray[receiver]->shipmentsnum++;
+    return TRUE;
 }
 
 /*********************************************************************************/
