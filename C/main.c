@@ -61,7 +61,7 @@ gboolean callback_button_pressed_about(GtkWidget *widget, GdkEvent  *event, gpoi
     char msg[128];
     
     g_print("About button pressed\n");
-    sprintf(msg,"%s\n%s : %s","פרויקט משלוחי מנות טלמון", " גירסא ", Version);
+    sprintf(msg,"%s\n%s : %s\n%s %s","פרויקט משלוחי מנות טלמון", " גירסא ", Version, "תאריך בניה ", __DATE__);
     show_about_window(window, msg);
 #ifdef DEBUG
     g_print ("back from About dialog\n");

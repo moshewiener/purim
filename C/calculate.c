@@ -188,7 +188,13 @@ gboolean CALC_calculate_shipments( void )
 
     /* sort randomLocations according to group number, so we get continuous blocks of families with same group. */
     qsort((void *)randomLocations, giversNum, sizeof(randomLocations[0]), groupnumCompare);
-
+#ifdef DEBUG
+    g_print("randomLocations\n================\n");
+    for (giverIndex=0; giverIndex < giversNum; giverIndex++)
+    {
+        g_print("%03d) %d\n", giverIndex, randomLocations[giverIndex]);
+    }
+#endif   
     /* run through all givers and set their shipments */
     for (giverIndex=0; giverIndex < giversNum; giverIndex++)
     {
@@ -196,6 +202,8 @@ gboolean CALC_calculate_shipments( void )
         receiver = giverIndex + maxMembers;
         for (shipment = 0; shipment < shipmentsNum; shipment++)
         {
+            if (receiver == giverIndex) receiver++; // don't allow person to give to himself
+            if (receiver >= giversNum) receiver -= giversNum;
             if (receiver == giverIndex) receiver++; // don't allow person to give to himself
             if (receiver >= giversNum) receiver -= giversNum;
             receiverFamily = randomLocations[receiver];
