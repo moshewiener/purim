@@ -25,6 +25,7 @@ typedef enum {
 extern GtkWidget *btnAddFamily, *btnDelFamily, *btnChgangeFamily, *btnShipmentsNum, *btnExtra;
 extern GtkWidget *btnLoadDbFile, *btnNewDB, *btnAddGroup, *btnDelGroup, *btnSaveDbFile;
 extern GtkWidget *btnCalculate, *btnSaveCalc, *btnLoadCalc, *btnManual;
+extern GtkWidget *btnDebug, *btnNotes;
 
 /* Other Main window widgets */
 extern GtkWidget *labelMain, *frame_listbox;

@@ -7,7 +7,7 @@ states:
     4-asked to add group        5-asked to del group
     6-define num of shipments   7-asked to change family
     8-extra shipments           9-manual shipment
-    10-only shipments loaded
+    10-only shipments loaded   11-both population and shipments loaded
 *********************************************************/ 
 static gint state = 0;
 
@@ -71,6 +71,7 @@ void hideAll( void )
     gtk_widget_hide( btnCalculate );
     gtk_widget_hide( btnSaveCalc );
     gtk_widget_hide( btnLoadCalc );
+    gtk_widget_hide( btnNotes );
     gtk_widget_hide( frame_listbox );
 }
 
@@ -334,6 +335,7 @@ void go_state11 ( void )
     gtk_widget_show( btnLoadCalc );
     gtk_widget_show( btnSaveCalc );
     gtk_widget_show( btnManual );
+    gtk_widget_show( btnNotes );
     gtk_label_set_text(labelMain, "נתוני התושבים והמשלוחים נטענו בהצלחה. בחר פעולה");
 }
 

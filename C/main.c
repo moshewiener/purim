@@ -46,6 +46,7 @@ static GtkWidget *scrollwin = NULL;
 GtkWidget *btnAddFamily, *btnDelFamily, *btnChgangeFamily, *btnShipmentsNum, *btnExtra;
 GtkWidget *btnLoadDbFile, *btnNewDB, *btnAddGroup, *btnDelGroup, *btnSaveDbFile;
 GtkWidget *btnCalculate, *btnSaveCalc, *btnLoadCalc, *btnManual;
+GtkWidget *btnDebug, *btnNotes;
 /* other widgets */
 GtkWidget *labelMain, *frameMainMsg, *frame_listbox;
 
@@ -95,45 +96,6 @@ gint CloseAppWindow_callback (GtkWidget *widget, gpointer *data)
     gtk_main_quit ();
     
     return (FALSE);
-}
-
-gboolean openfile_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
-{
-    GtkWidget *dialog;
-    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
-    GtkFileFilter *filter;
-    gint res;
-    
-    dialog = gtk_file_chooser_dialog_new ("Open File",
-                                          window,
-                                          action,
-                                          "_Cancel",
-                                          GTK_RESPONSE_CANCEL,
-                                          "_Open",
-                                          GTK_RESPONSE_ACCEPT,
-                                          NULL);
-    
-    filter = gtk_file_filter_new();
-    gtk_file_filter_add_pattern(filter, "*.odt");
-    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
-    
-    res = gtk_dialog_run (GTK_DIALOG (dialog));
-    if (res == GTK_RESPONSE_ACCEPT)
-    {
-        char *filename;
-        char command[64];
-        GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
-        gtk_file_chooser_set_create_folders( chooser, FALSE );
-        filename = gtk_file_chooser_get_filename (chooser);
-        g_print("Filename %s\n", filename);
-        sprintf(command, "libreoffice --writer %s", filename);
-        system(command);
-        g_free( filename );
-    }
-    
-    gtk_widget_destroy (dialog);
-    go_main_state();
-    return TRUE;
 }
 
 /*-----------------------------------------------------------------------------*/
@@ -426,60 +388,6 @@ static void add_toolbar_to_box( GtkWidget *box )
 }
 
 /********************************************************/
-/* Create a Button Box with the specified parameters.   */
-/* Return a new frame wich contains a button box, which */
-/* in turn contains 4 buttons, OK, CANCE, HELP, QUIT    */
-/********************************************************/
-static GtkWidget *create_bbox( gint  horizontal,
-                               char *title,
-                               gint  spacing,
-                               gint  child_w,
-                               gint  child_h,
-                               gint  layout,
-                               GtkWidget *image)
-{
-    GtkWidget *frame;
-    GtkWidget *bbox;
-    GtkWidget *button;
-    
-    frame = gtk_frame_new (title);
-    
-    if (horizontal)
-        bbox = gtk_hbutton_box_new ();
-    else
-        bbox = gtk_vbutton_box_new ();
-    
-    gtk_container_set_border_width (GTK_CONTAINER (bbox), 5);
-    gtk_container_add (GTK_CONTAINER (frame), bbox);
-    
-    /* Set the appearance of the Button Box */
-    gtk_button_box_set_layout (GTK_BUTTON_BOX (bbox), layout);
-    gtk_box_set_spacing (GTK_BOX (bbox), spacing);
-    //gtk_button_box_set_child_size (GTK_BUTTON_BOX (bbox), child_w, child_h);
-    
-    button = gtk_button_new_from_stock (GTK_STOCK_OK);
-    gtk_container_add (GTK_CONTAINER (bbox), button);
-    
-    button = gtk_button_new_from_stock (GTK_STOCK_CANCEL);
-    gtk_container_add (GTK_CONTAINER (bbox), button);
-    
-    
-    button = gtk_button_new_from_stock (GTK_STOCK_HELP);
-    gtk_container_add (GTK_CONTAINER (bbox), button);
-    g_signal_connect (button, "button-press-event", G_CALLBACK (help_button_pressed_callback), NULL); // TEMP for DEBUG
-    
-    button = gtk_button_new_from_stock (GTK_STOCK_QUIT);
-    gtk_container_add (GTK_CONTAINER (bbox), button);
-    
-    if (image != NULL)
-    {
-        gtk_container_add (GTK_CONTAINER (bbox), image);
-    }
-    
-    return frame;
-}
-
-/********************************************************/
 static GtkWidget *create_frame_with_buttons( gint  horizontal,
                                              char *title,
                                              gint  spacing,
@@ -626,7 +534,7 @@ void fill_listbox_with_persons( GtkWidget *listBox )
 int main( int argc, char *argv[] )
 {
     GtkWidget *main_vbox, *main_hbox, *vbox, *hbox, *image_vbox;
-    GtkWidget *frame_horz, *frame_vert, *frame_image_btns2, *frame_image, *image_buttons_frame;
+    GtkWidget *frame_horz, *frame_vert, *frame_image_btns2, *frame_image, *frame_image_buttons;
     GtkWidget *image, *icon;
     GdkPixbuf *pixbuf;
     GtkCssProvider *cssBtn;
@@ -714,12 +622,20 @@ int main( int argc, char *argv[] )
     set_button_attributes( &(buttonsArray[1]) ,0xFFFFFF, 0x4040FF, "שמור משלוחים"); 
     set_button_attributes( &(buttonsArray[2]) ,0xFFFFFF, 0x600060, "טען משלוחים");
     set_button_attributes( &(buttonsArray[3]) ,0xFFFFFF, 0x008080, "שינוי ידני");
-    frame_image_btns2 = create_frame_with_buttons( TRUE, "Shipments Buttons Frame", 5, 4, buttonsArray, GTK_BUTTONBOX_SPREAD);
+    frame_image_buttons = create_frame_with_buttons( TRUE, "Shipments Buttons Frame", 5, 4, buttonsArray, GTK_BUTTONBOX_SPREAD);
     
     btnCalculate =  buttonsArray[0].p_button;
     btnSaveCalc =  buttonsArray[1].p_button;
     btnLoadCalc = buttonsArray[2].p_button;
     btnManual = buttonsArray[3].p_button;
+    
+    // Create a frame for the calculation buttons and add it to the main container (pack the container with the frame)
+    set_button_attributes( &(buttonsArray[0]) ,0xFFFF00, 0x000000, "DEBUG"); // black
+    set_button_attributes( &(buttonsArray[1]) ,0x0000A0, 0x40C0FF, "הפקת פתקים"); 
+    frame_image_btns2 = create_frame_with_buttons( TRUE, "Notes Button Frame", 5, 2, buttonsArray, GTK_BUTTONBOX_SPREAD);
+    
+    btnDebug =  buttonsArray[0].p_button;
+    btnNotes =  buttonsArray[1].p_button;
     
     // Set button callback functions
     g_signal_connect (btnNewDB, "button-press-event", G_CALLBACK (newDB_button_pressed_callback), NULL);
@@ -736,6 +652,7 @@ int main( int argc, char *argv[] )
     g_signal_connect (btnSaveCalc, "button-press-event", G_CALLBACK (save_shipments_button_pressed_callback), NULL);
     g_signal_connect (btnLoadCalc, "button-press-event", G_CALLBACK (load_shipments_button_pressed_callback), NULL);
     g_signal_connect (btnManual, "button-press-event", G_CALLBACK (manual_chg_button_pressed_callback), NULL);
+    g_signal_connect (btnDebug, "button-press-event", G_CALLBACK (help_button_pressed_callback), NULL);
     // Expand argument is true, so fill in all the extra space in the box, and the
     //fill argument is also true, so he extra space is allocated to the objects themselves 
     gtk_box_pack_start (GTK_BOX (main_hbox), frame_vert, TRUE, TRUE, 10);
@@ -755,8 +672,7 @@ int main( int argc, char *argv[] )
     image_vbox =gtk_vbox_new (FALSE,0);
     gtk_container_add (GTK_CONTAINER (frame_image), image_vbox);
     gtk_container_add (GTK_CONTAINER (image_vbox), image);
-    image_buttons_frame = create_bbox (TRUE, "Image Buttons Frame", 5, 85, 20, GTK_BUTTONBOX_SPREAD, NULL);
-    gtk_container_add (GTK_CONTAINER (image_vbox), image_buttons_frame);
+    gtk_container_add (GTK_CONTAINER (image_vbox), frame_image_buttons);
     gtk_container_add (GTK_CONTAINER (image_vbox), frame_image_btns2);
     
     gtk_widget_show_all (window);
