@@ -256,12 +256,43 @@ long CALC_get_giver_shipment( unsigned long personNum, int shipmentNum )
 }
 
 /********************************************************/
+long CALC_get_person_by_giver( unsigned long giver )
+{    
+    if (is_shipments_data_loaded == FALSE) return (-1);
+    if (giversNum < 1) return (-1);
+    if (giver >= giversNum) return (-1);
+    return givingToArray[giver]->familynum;
+}
+
+/********************************************************/
+long CALC_get_givers_num( void )
+{
+    if (is_shipments_data_loaded == FALSE) return (-1);
+    if (familiesNum < 1) return (-1);
+    if (givingToArray[0] == NULL) return (-1);
+    return giversNum;
+}
+
+/********************************************************/
 long CALC_get_receivers_num( void )
 {
     if (is_shipments_data_loaded == FALSE) return (-1);
     if (familiesNum < 1) return (-1);
     if (receivingFromArray[0] == NULL) return (-1);
     return familiesNum;
+}
+
+/********************************************************/
+int CALC_get_shipments_num( unsigned long personNum )
+{
+    int giverIndex;
+    
+    if (is_shipments_data_loaded == FALSE) return (-1);
+    if (personNum >= familiesNum) return (-1);
+    giverIndex = find_giver_index( personNum );
+    if (giverIndex < 0) return (-1);
+    if (givingToArray[giverIndex] == NULL) return (-1);
+    return givingToArray[giverIndex]->shipmentsnum;
 }
 
 /*************************************************************/
@@ -301,7 +332,7 @@ gboolean CALC_manual_change_shipments( unsigned long personNum, int shipmentsNum
 /*****************************************************/
 static long find_giver_index( unsigned long personNum )
 {
-    unsigned long index;
+    long index;
     
     if (is_shipments_data_loaded == FALSE) return (-1);
     if (familiesNum < 1) return (-1);
@@ -309,7 +340,7 @@ static long find_giver_index( unsigned long personNum )
     for (index = 0; index < giversNum; index++)
     {
         if (givingToArray[index]->familynum == personNum)
-            return (long)index;
+            return index;
     }
     return (-1);
 }
@@ -585,7 +616,7 @@ void CALC_debug_print_shipments( void )
    {
        if (givingToArray[giverIndex] == NULL) break;
        shipments = givingToArray[giverIndex]->shipmentsnum;
-       g_print("Family %d gives to: ", givingToArray[giverIndex]->familynum);
+       g_print("Family %d gives %d shipments to: ", givingToArray[giverIndex]->familynum, shipments);
        for (shipmentIndex = 0; shipmentIndex < shipments; shipmentIndex++)
            g_print("[%d] ", givingToArray[giverIndex]->shipment[shipmentIndex]);
        g_print("\n");

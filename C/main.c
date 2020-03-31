@@ -8,6 +8,9 @@
  * gcc -o $FILE ${FILE}.c about.c -w -I . `pkg-config --cflags --libs gtk+-3.0` -export-dynamic; ./${FILE}
  */
 #include <purim_api.h>
+#include <inttypes.h>
+#include <math.h>
+#include <time.h>
 #include "purim1_image.h"
 
 typedef struct button_data { 
@@ -34,6 +37,7 @@ static gboolean saveDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *eve
 static gboolean save_shipments_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 static gboolean load_shipments_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 static gboolean manual_chg_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
+static gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 
 static void set_button_attributes(button_data *btn, gint colour, gint backcolour, gchar *title);
 static void add_toolbar_to_box( GtkWidget *box );
@@ -191,7 +195,7 @@ static gboolean load_shipments_button_pressed_callback(GtkWidget *widget, GdkEve
     gboolean result;
     char *errmsg = NULL;
     
-    dialog = gtk_file_chooser_dialog_new ("Load Shipments File",
+    dialog = gtk_file_chooser_dialog_new ("טען קובץ פתקים",
                                           window,
                                           action, "_ביטול",
                                           GTK_RESPONSE_CANCEL, "_שמור",
@@ -246,6 +250,101 @@ gboolean manual_chg_button_pressed_callback(GtkWidget *widget, GdkEvent  *event,
 }
 
 /*---------------------------------------------------------*/
+gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+{
+    long giversnum, receiversnum, giverIndex, receiver, personNum;
+    char *command = NULL;
+    char *destFilename = NULL;
+    char *templateFilename = NULL;
+    int shipments, shipmentIndex;
+    char receiverName[2*sizeof(String32) + 4];
+    char title[64];
+    long ms_start, ms_end;
+    time_t sec_start, sec_end;
+    struct timespec spec;
+    
+    
+    clock_gettime(CLOCK_REALTIME, &spec);
+    sec_start = spec.tv_sec;
+    ms_start = round(spec.tv_nsec / 1.0e6);
+    if (ms_start > 999) { sec_start++; ms_start = 0; }
+    
+    
+    if (CALC_is_data_loaded() == FALSE)
+        goto NO_SHIPMENTS_DATA;
+    giversnum = CALC_get_givers_num();
+    receiversnum = CALC_get_receivers_num();
+    if ((giversnum < 1) || (receiversnum < 1))
+        goto NO_SHIPMENTS_DATA;
+    
+    if ((templateFilename = msgBoxOpenfile( "*.odt" , "בחר קובץ תבנית")) != NULL)
+        destFilename = msgBoxSavefile( "*.odt" , "בחר קובץ לשמירת הפתקים");
+    if ((templateFilename == NULL) || (destFilename == NULL))
+        goto FINISH;
+    // Open communication channel with Libreoffice
+    if (COMM_build_comm_libreoffice() == FALSE)
+    {
+        msgBoxError( window, "נכשל נסיון הקמת תקשורת עם השרת");
+        goto FINISH;
+    }
+    // Tell Libreoffice server the template file name
+    command = malloc(strlen(templateFilename) + 1);
+    strcpy(command, templateFilename);
+    COMM_send_command( COMM_CMD_TEMPLATE_FILE, command );
+    // Tell Libreoffice server the notes file name
+    if (strlen(destFilename) > strlen(templateFilename))
+    {
+        free(command);
+        command = malloc(strlen(destFilename) + 1);
+    }
+    strcpy(command, destFilename);
+    COMM_send_command( COMM_CMD_NOTES_FILE, command );
+    // send all shipments notes
+    free(command);
+    command = malloc((sizeof(String32)+1)*(MAX_SHIPMENTS+MAX_EXTRA_SHIPMENTS));
+    for (giverIndex = 0; giverIndex < giversnum; giverIndex++)
+    {
+        personNum = CALC_get_person_by_giver( giverIndex );
+        shipments = CALC_get_shipments_num( personNum );
+        g_print("Giver[%d]: ",personNum);
+        sprintf(command, "%s %s",DB_get_surname(personNum),DB_get_firstname(personNum));
+        for (shipmentIndex=0; shipmentIndex < shipments; shipmentIndex++)
+        {
+            receiver = CALC_get_giver_shipment( personNum, shipmentIndex );
+            g_print("[%d] ", receiver);
+            if (receiver >= 0)
+            {
+                sprintf(receiverName, ",%s %s",DB_get_surname(receiver),DB_get_firstname(receiver));
+                strcat(command, receiverName);
+            }
+        } // for shipmentIndex
+        g_print("\n");
+        sprintf(title, "%s %d", "מייצר פתק עבור משפחה מספר", personNum);
+        gtk_label_set_text(labelMain, title);
+        g_print("%s: sending record: %s\n", __FUNCTION__, command);
+        COMM_send_command(COMM_CMD_MAKE_NOTE, command);
+    } // for giverIndex
+    // Tell Libreoffice server to close communication and shut down
+    COMM_send_command( COMM_CMD_DONE, "Done");
+FINISH:
+    if (command != NULL) free(command);
+    if (templateFilename != NULL) free(templateFilename);
+    if (destFilename != NULL) free(destFilename);
+    
+    clock_gettime(CLOCK_REALTIME, &spec);
+    sec_end = spec.tv_sec;
+    ms_end = round(spec.tv_nsec / 1.0e6);
+    if (ms_end > 999) { sec_end++; ms_end = 0; }
+    sprintf(title, "%s\n%s %d %s" , "הסתיים תהליך כתיבת הפתקים לקובץ", "התהליך ארך", (sec_end - sec_start), "שניות");
+    msgBoxSuccess(window, title);
+    return TRUE;
+    
+NO_SHIPMENTS_DATA:
+    msgBoxError(window, "אין נתוני משלוחים");
+    return FALSE;
+}
+
+/*---------------------------------------------------------*/
 /* DEBUG function */
 gboolean help_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
 {
@@ -276,7 +375,7 @@ gboolean help_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpoin
            DB_get_persons_num(), DB_get_givers_num(), DB_get_shipments_num());
 
     CALC_debug_print_shipments();
-    
+
     return TRUE;
 }
 
@@ -344,7 +443,7 @@ gboolean loadDB_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpo
     char *filename = NULL;
     gboolean result;
     
-    filename = msgBoxOpenfile( "*.csv" );
+    filename = msgBoxOpenfile( "*.csv" , "בחר קובץ נתוני תושבים");
     result = DB_init_purim_db( (filename==NULL)? "../data/smalldb.csv" : filename );
     if (filename != NULL) free(filename);
     if (result == FALSE)
@@ -652,6 +751,7 @@ int main( int argc, char *argv[] )
     g_signal_connect (btnSaveCalc, "button-press-event", G_CALLBACK (save_shipments_button_pressed_callback), NULL);
     g_signal_connect (btnLoadCalc, "button-press-event", G_CALLBACK (load_shipments_button_pressed_callback), NULL);
     g_signal_connect (btnManual, "button-press-event", G_CALLBACK (manual_chg_button_pressed_callback), NULL);
+    g_signal_connect (btnNotes, "button-press-event", G_CALLBACK (make_notes_button_pressed_callback), NULL);
     g_signal_connect (btnDebug, "button-press-event", G_CALLBACK (help_button_pressed_callback), NULL);
     // Expand argument is true, so fill in all the extra space in the box, and the
     //fill argument is also true, so he extra space is allocated to the objects themselves 

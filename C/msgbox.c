@@ -120,7 +120,7 @@ GtkResponseType msgBoxSuccess ( GtkWindow *window, char *msg )
 /****************************************************************
  * Caller of this function needs to free the returned file name *
  ****************************************************************/
-char *msgBoxOpenfile( char *fileFilter )
+char *msgBoxOpenfile( char *fileFilter, char *title )
 {
     GtkWidget *dialog;
     GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
@@ -128,7 +128,7 @@ char *msgBoxOpenfile( char *fileFilter )
     char *filename = NULL;
     gint res;
     
-    dialog = gtk_file_chooser_dialog_new ("Open File",
+    dialog = gtk_file_chooser_dialog_new ((title == NULL)? "Open File" : title,
                                           window,
                                           action,
                                           "_Cancel",
@@ -149,6 +149,43 @@ char *msgBoxOpenfile( char *fileFilter )
         filename = gtk_file_chooser_get_filename (chooser);
     }
     
+    gtk_widget_destroy (dialog);
+    return filename;
+}
+
+/****************************************************************
+ * Caller of this function needs to free the returned file name *
+ ****************************************************************/
+char *msgBoxSavefile( char *fileFilter, char *title )
+{
+    GtkWidget *dialog;
+    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SAVE;
+    GtkFileFilter *filter;
+    char *filename = NULL;
+    gint res;
+    
+    dialog = gtk_file_chooser_dialog_new ((title == NULL)? "Open File" : title,
+                                          window,
+                                          action,
+                                          "_Cancel",
+                                          GTK_RESPONSE_CANCEL,
+                                          "_Open",
+                                          GTK_RESPONSE_ACCEPT,
+                                          NULL);
+    
+    filter = gtk_file_filter_new();
+    gtk_file_filter_add_pattern(filter, (fileFilter==NULL)? "*.*" : fileFilter);
+    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+    gtk_window_set_default_size( dialog, 800, 600 );
+    res = gtk_dialog_run (GTK_DIALOG (dialog));
+    if (res == GTK_RESPONSE_ACCEPT)
+    {
+        GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
+        gtk_file_chooser_set_create_folders( chooser, FALSE );
+        filename = gtk_file_chooser_get_filename (chooser);
+    }
+    
+    gtk_widget_hide (dialog);
     gtk_widget_destroy (dialog);
     return filename;
 }

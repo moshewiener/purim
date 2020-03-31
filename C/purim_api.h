@@ -2,6 +2,13 @@
 #ifndef __PURIM_API_H__
 #define __PURIM_API_H__
 #include <gtk/gtk.h>
+#include <stdio.h> 
+#include <stdlib.h>
+#include <string.h> 
+#include <fcntl.h> 
+#include <sys/stat.h> 
+#include <sys/types.h> 
+#include <unistd.h> 
 #include "purimicon.h"
 
 typedef char String32[32];
@@ -15,6 +22,13 @@ typedef enum {
     DATABOX_REQ_EXTRA,
     DATABOX_REQ_MANUAL
 } databoxreq;
+
+typedef enum {
+    COMM_CMD_TEMPLATE_FILE = 1,
+    COMM_CMD_NOTES_FILE,
+    COMM_CMD_MAKE_NOTE,
+    COMM_CMD_DONE
+} COMM_command;
 
 #define MAX_GROUPS_NUM      12
 #define MAX_SHIPMENTS       12
@@ -56,7 +70,8 @@ void show_about_window (GtkWindow *parent, gchar *message);
 GtkResponseType msgBoxYesNo ( GtkWindow *window, char *msg );
 GtkResponseType msgBoxError ( GtkWindow *window, char *msg );
 GtkResponseType msgBoxSuccess ( GtkWindow *window, char *msg );
-char *msgBoxOpenfile( char *fileFilter );
+char *msgBoxOpenfile( char *fileFilter, char *title);
+char *msgBoxSavefile( char *fileFilter, char *title);
 
 /* CSS colouring widget functions */
 void init_css_table ( void );
@@ -102,11 +117,19 @@ void databox_request_service( databoxreq req );
 gboolean CALC_calculate_shipments( void );
 gboolean CALC_save_shipments(char *filename, char **errmsg);
 gboolean CALC_load_shipments(char *filename, char **errmsg);
+long CALC_get_person_by_giver( unsigned long giver );
+long CALC_get_givers_num( void );
 long CALC_get_receivers_num( void );
+int CALC_get_shipments_num( unsigned long personNum );
 long CALC_get_giver_shipment( unsigned long personNum, int shipmentNum );
 gboolean CALC_manual_change_shipments( unsigned long personNum, int shipmentsNum, unsigned long *shipmentsArray );
 gboolean CALC_is_data_loaded( void );
 void CALC_debug_print_shipments( void );
+
+/* C Application to Libreoffice Basic macro communication */
+gboolean COMM_build_comm_libreoffice( void );
+int COMM_send_command( int commandId, char *body );
+int COMM_test();
 
 /* widgets show states functions */
 void hideAll( void );

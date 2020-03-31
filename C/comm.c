@@ -1,13 +1,7 @@
-// C program to implement communication with the macro 'MainCommLoop'
-// in source.odt LibreOffice document.
-//  
-#include <stdio.h> 
-#include <stdlib.h>
-#include <string.h> 
-#include <fcntl.h> 
-#include <sys/stat.h> 
-#include <sys/types.h> 
-#include <unistd.h> 
+// C program to implement communication with the macro 'Main_Comm_Loop'
+// in source.odt LibreOffice Module1 macro.
+//
+#include <purim_api.h>
 
 #define MAX_ATTEMPS 100
 #define MIN_RESPONSE_LEN 12
@@ -29,7 +23,7 @@ int COMM_build_comm_libreoffice( void )
     if (fd1 < 0)
     {
         printf("Broken comm - open for create failed\n");
-        return -1;
+        return FALSE;
     }
     close(fd1);    
     // Invoke the LibreOffice file macro. Start with killing all existing LibreOffice unterminated background threads.
@@ -45,9 +39,9 @@ int COMM_build_comm_libreoffice( void )
     {
         printf("Broken comm - access failed\n");
         unlink(clientFileName);
-        return -1;
+        return FALSE;
     }
-    return 0;
+    return TRUE;
 }
 
 //-------------------------------------------------------------
@@ -55,7 +49,7 @@ int COMM_send_command( int commandId, char *body )
 { 
     int fd1, fd2, index;
     int replyRef; 
-    char str1[80], refStr[5];
+    char str1[256], refStr[5];
     char *cmdPtr;
     ssize_t bytes, newBytes;
     
@@ -116,7 +110,7 @@ int COMM_send_command( int commandId, char *body )
 } 
 
 //-------------------------------------------------------------
-int main() 
+int COMM_test() 
 { 
     int fd1, fd2, index, cmd, elements;
     int  rc; 
@@ -137,7 +131,7 @@ int main()
         "Done"
     };
     
-    if (COMM_build_comm_libreoffice() != 0)
+    if (COMM_build_comm_libreoffice() != TRUE)
     {
         printf("Broken comm - setup communication with Libreoffice failed\n");
         unlink(clientFileName);
