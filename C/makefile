@@ -2,7 +2,7 @@
 
 FLAGS = $(shell pkg-config --cflags --libs gtk+-3.0)
 CC = gcc
-CFILES = main.c about.c css.c purimUtil.c csv.c databox.c calculate.c msgbox.c comm.c
+CFILES = main.c main_cb.c about.c css.c purimUtil.c csv.c databox.c calculate.c msgbox.c comm.c
 TARGET = purim
 INCLUDES = -I .
 PROJ_VERSION = "\"2.2\""
