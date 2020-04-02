@@ -8,6 +8,7 @@ states:
     6-define num of shipments   7-asked to change family
     8-extra shipments           9-manual shipment
     10-only shipments loaded   11-both population and shipments loaded
+    12-during notes creation
 *********************************************************/ 
 static gint state = 0;
 
@@ -73,6 +74,7 @@ void hideAll( void )
     gtk_widget_hide( btnLoadCalc );
     gtk_widget_hide( btnNotes );
     gtk_widget_hide( btnNote );
+    gtk_widget_hide( btnCancel );
     gtk_widget_hide( frame_listbox );
 }
 
@@ -339,6 +341,17 @@ void go_state11 ( void )
     gtk_widget_show( btnNotes );
     gtk_widget_show( btnNote );
     gtk_label_set_text(labelMain, "נתוני התושבים והמשלוחים נטענו בהצלחה. בחר פעולה");
+}
+
+void go_state12 ( void )
+{
+    /* During notes creation */
+    if (Databox_window != NULL) gtk_widget_hide( Databox_window );
+    gtk_widget_show_all( window );
+    hideAll(); 
+    gtk_widget_show( frame_listbox );
+    gtk_widget_show( btnCancel );
+    gtk_label_set_text(labelMain, "מייצר פתקים למשפחות");
 }
 
 void go_main_state( void )

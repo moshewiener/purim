@@ -23,5 +23,6 @@ gboolean load_shipments_button_pressed_callback(GtkWidget *widget, GdkEvent  *ev
 gboolean manual_chg_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gboolean make_note_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
+gboolean cancel_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data);
 gint timeout_make_notes_callback (gpointer user_data);
 #endif /* _MAIN_CB_H_ */

@@ -5,16 +5,33 @@
 
 #define MAX_ATTEMPS 100
 #define MIN_RESPONSE_LEN 12
+#define MAX_PATH_LEN 96
 
-static char * srvFileName = "/home/mwiener/purimsrv.txt";
-static char *clientFileName = "/home/mwiener/purimclient.txt";
+static char *shortServerFileName = "purimsrv.txt";
+static char *shortClientFileName = "purimclient.txt";
+static char srvFileName[MAX_PATH_LEN];
+static char clientFileName[MAX_PATH_LEN];
 static int refNum = 0;
 
 //-------------------------------------------------------------
 int COMM_build_comm_libreoffice( void )
 {
     int fd1, index;
+    char *home;
     
+    home = getenv("HOME");
+    if (home == NULL)
+    {
+        printf("%s: Can't set HOME directory name\n",  __FUNCTION__);
+        return FALSE;
+    }
+    if (strlen(home) >= (MAX_PATH_LEN - strlen(shortClientFileName)))
+    {
+        printf("%s: Too long HOME directory name %s\n", __FUNCTION__ , home);
+        return FALSE;
+    }
+    sprintf(srvFileName, "%s/%s", home, shortServerFileName);
+    sprintf(clientFileName, "%s/%s", home, shortClientFileName);
     //erase communication files if exist from previous session
     unlink(clientFileName);
     unlink(srvFileName); 
@@ -22,7 +39,7 @@ int COMM_build_comm_libreoffice( void )
     fd1 = open(clientFileName, O_RDWR | O_CREAT, 0777); 
     if (fd1 < 0)
     {
-        printf("Broken comm - open client file for create failed\n");
+        printf("Broken comm - open client file %s for create failed\n", clientFileName);
         return FALSE;
     }
     close(fd1);
@@ -30,7 +47,7 @@ int COMM_build_comm_libreoffice( void )
     fd1 = open(srvFileName, O_RDWR | O_CREAT, 0777); 
     if (fd1 < 0)
     {
-        printf("Broken comm - open server file for create failed\n");
+        printf("Broken comm - open server file %s for create failed\n", srvFileName);
         return FALSE;
     }
     close(fd1); 

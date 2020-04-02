@@ -10,6 +10,8 @@ static long user_data;
 static time_t sec_start, sec_end;
 static long ms_start, ms_end;
 static gint timer_tag;
+static gboolean quit_create_notes = FALSE;
+
 /*********** CALLBACK functions ********************************/
 
 gboolean callback_button_pressed_about(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
@@ -393,7 +395,8 @@ gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event,
     char title[128];
     struct timespec spec;
     int minutes, seconds;
-    
+
+    quit_create_notes = FALSE;
     if (CALC_is_data_loaded() == FALSE)
         goto NO_SHIPMENTS_DATA;
     giversnum = CALC_get_givers_num();
@@ -405,6 +408,10 @@ gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event,
         destFilename = msgBoxSavefile( "*.odt" , "בחר קובץ לשמירת הפתקים");
     if ((templateFilename == NULL) || (destFilename == NULL))
         goto FINISH;
+    go_state12();
+    gtk_label_set_text(labelMain, "פותח ערוץ תקשורת לשרת פתקיות");
+    while (gtk_events_pending())
+            gtk_main_iteration();
     clock_gettime(CLOCK_REALTIME, &spec);
     sec_start = spec.tv_sec;
     ms_start = round(spec.tv_nsec / 1.0e6);
@@ -432,6 +439,7 @@ gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event,
     command = malloc((sizeof(String32)+1)*(MAX_SHIPMENTS+MAX_EXTRA_SHIPMENTS));
     for (giverIndex = 0; giverIndex < giversnum; giverIndex++)
     {
+        if (quit_create_notes == TRUE) break;
         personNum = CALC_get_person_by_giver( giverIndex );
         shipments = CALC_get_shipments_num( personNum );
 #ifdef DEBUG
@@ -478,6 +486,7 @@ FINISH:
     if (command != NULL) free(command);
     if (templateFilename != NULL) free(templateFilename);
     if (destFilename != NULL) free(destFilename);
+    go_main_state();
     return TRUE;
     
 NO_SHIPMENTS_DATA:
@@ -497,8 +506,9 @@ gboolean make_note_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, 
     char *templateFilename = NULL;
     int shipments, shipmentIndex, len;
     char receiverName[2*sizeof(String32) + 4];
-    char title[64];
-    
+    char title[96];
+
+    quit_create_notes = FALSE;
     row = gtk_list_box_get_selected_row( list_box );
     if (row == NULL)
     {
@@ -530,6 +540,11 @@ gboolean make_note_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, 
         destFilename = msgBoxSavefile( "*.odt" , "בחר קובץ לשמירת הפתק");
     if ((templateFilename == NULL) || (destFilename == NULL))
         goto FINISH;
+    
+    go_state12();
+    gtk_label_set_text(labelMain, "פותח ערוץ תקשורת לשרת פתקיות");
+    while (gtk_events_pending())
+            gtk_main_iteration();
     // Open communication channel with Libreoffice
     if (COMM_build_comm_libreoffice() == FALSE)
     {
@@ -537,6 +552,10 @@ gboolean make_note_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, 
         goto FINISH;
     }
     // Tell Libreoffice server the template file name
+    sprintf(title, "%s %s %s", "מייצר פתק עבור משפחת ",  DB_get_surname(personNum), DB_get_firstname(personNum));
+    gtk_label_set_text(labelMain, title);
+    while (gtk_events_pending())
+            gtk_main_iteration();
     command = malloc(strlen(templateFilename) + 1);
     strcpy(command, templateFilename);
     COMM_send_command( COMM_CMD_TEMPLATE_FILE, command );
@@ -570,8 +589,6 @@ gboolean make_note_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, 
             strcat(command, receiverName);
         }
     } // for shipmentIndex
-    sprintf(title, "%s %d %s %d", "מייצר פתק עבור משפחה מספר", personNum, "מתוך", giversnum);
-    gtk_label_set_text(labelMain, title);
     #ifdef DEBUG
     g_print("%s %d : %s %s\n", "שולח רשומת משלוחים מספר ", giverIndex, DB_get_surname(personNum),DB_get_firstname(personNum));
     #endif
@@ -588,6 +605,7 @@ FINISH:
     if (command != NULL) free(command);
     if (templateFilename != NULL) free(templateFilename);
     if (destFilename != NULL) free(destFilename);
+    go_main_state();
     return TRUE;
     
 NO_SHIPMENTS_DATA:
@@ -674,4 +692,12 @@ gint timeout_make_notes_callback (gpointer user_data)
         return FALSE;
     }
 }
+
+//-----------------------------------------------------------------------------
+gboolean cancel_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+{
+    quit_create_notes = TRUE;
+    return TRUE;
+}
+
 

@@ -39,7 +39,7 @@ typedef enum {
 extern GtkWidget *btnAddFamily, *btnDelFamily, *btnChgangeFamily, *btnShipmentsNum, *btnExtra;
 extern GtkWidget *btnLoadDbFile, *btnNewDB, *btnAddGroup, *btnDelGroup, *btnSaveDbFile;
 extern GtkWidget *btnCalculate, *btnSaveCalc, *btnLoadCalc, *btnManual;
-extern GtkWidget *btnDebug, *btnNotes, *btnNote;
+extern GtkWidget *btnDebug, *btnNotes, *btnNote, *btnCancel;
 
 /* Other Main window widgets */
 extern GtkWidget *labelMain, *frame_listbox;
@@ -146,5 +146,6 @@ void go_state8( void ); // extra shipments
 void go_state9( void ); // manually change shipments
 void go_state10( void ); //population data not loaded, shipments data loaded
 void go_state11( void ); //both population data and shipments data are loaded
+void go_state12( void ); //during notes creation
 void go_main_state( void ); //choose between states 0,1,10,11
 #endif /* __PURIM_API_H__ */
