@@ -72,6 +72,7 @@ void hideAll( void )
     gtk_widget_hide( btnSaveCalc );
     gtk_widget_hide( btnLoadCalc );
     gtk_widget_hide( btnNotes );
+    gtk_widget_hide( btnNote );
     gtk_widget_hide( frame_listbox );
 }
 
@@ -336,6 +337,7 @@ void go_state11 ( void )
     gtk_widget_show( btnSaveCalc );
     gtk_widget_show( btnManual );
     gtk_widget_show( btnNotes );
+    gtk_widget_show( btnNote );
     gtk_label_set_text(labelMain, "נתוני התושבים והמשלוחים נטענו בהצלחה. בחר פעולה");
 }
 

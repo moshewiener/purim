@@ -36,7 +36,7 @@ static GtkWidget *scrollwin = NULL;
 GtkWidget *btnAddFamily, *btnDelFamily, *btnChgangeFamily, *btnShipmentsNum, *btnExtra;
 GtkWidget *btnLoadDbFile, *btnNewDB, *btnAddGroup, *btnDelGroup, *btnSaveDbFile;
 GtkWidget *btnCalculate, *btnSaveCalc, *btnLoadCalc, *btnManual;
-GtkWidget *btnDebug, *btnNotes;
+GtkWidget *btnDebug, *btnNotes, *btnNote;
 /* other widgets */
 GtkWidget *labelMain, *frameMainMsg, *frame_listbox;
 
@@ -312,11 +312,13 @@ int main( int argc, char *argv[] )
     
     // Create a frame for the calculation buttons and add it to the main container (pack the container with the frame)
     set_button_attributes( &(buttonsArray[0]) ,0xFFFF00, 0x000000, "DEBUG"); // black
-    set_button_attributes( &(buttonsArray[1]) ,0x0000A0, 0x40C0FF, "הפקת פתקים"); 
-    frame_image_btns2 = create_frame_with_buttons( TRUE, "Notes Button Frame", 5, 2, buttonsArray, GTK_BUTTONBOX_SPREAD);
+    set_button_attributes( &(buttonsArray[1]) ,0x0000A0, 0x40C0FF, "הפקת פתקים");
+    set_button_attributes( &(buttonsArray[2]) ,0x000070, 0x60E0FF, "הפקת פתק אחד");
+    frame_image_btns2 = create_frame_with_buttons( TRUE, "Notes Button Frame", 5, 3, buttonsArray, GTK_BUTTONBOX_SPREAD);
     
     btnDebug =  buttonsArray[0].p_button;
     btnNotes =  buttonsArray[1].p_button;
+    btnNote  =  buttonsArray[2].p_button;
     
     // Set button callback functions
     g_signal_connect (btnNewDB, "button-press-event", G_CALLBACK (newDB_button_pressed_callback), NULL);
@@ -334,6 +336,7 @@ int main( int argc, char *argv[] )
     g_signal_connect (btnLoadCalc, "button-press-event", G_CALLBACK (load_shipments_button_pressed_callback), NULL);
     g_signal_connect (btnManual, "button-press-event", G_CALLBACK (manual_chg_button_pressed_callback), NULL);
     g_signal_connect (btnNotes, "button-press-event", G_CALLBACK (make_notes_button_pressed_callback), NULL);
+    g_signal_connect (btnNote, "button-press-event", G_CALLBACK (make_note_button_pressed_callback), NULL);
     g_signal_connect (btnDebug, "button-press-event", G_CALLBACK (help_button_pressed_callback), NULL);
     // Expand argument is true, so fill in all the extra space in the box, and the
     //fill argument is also true, so he extra space is allocated to the objects themselves 

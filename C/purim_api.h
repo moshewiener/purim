@@ -39,7 +39,7 @@ typedef enum {
 extern GtkWidget *btnAddFamily, *btnDelFamily, *btnChgangeFamily, *btnShipmentsNum, *btnExtra;
 extern GtkWidget *btnLoadDbFile, *btnNewDB, *btnAddGroup, *btnDelGroup, *btnSaveDbFile;
 extern GtkWidget *btnCalculate, *btnSaveCalc, *btnLoadCalc, *btnManual;
-extern GtkWidget *btnDebug, *btnNotes;
+extern GtkWidget *btnDebug, *btnNotes, *btnNote;
 
 /* Other Main window widgets */
 extern GtkWidget *labelMain, *frame_listbox;
@@ -118,6 +118,7 @@ gboolean CALC_calculate_shipments( void );
 gboolean CALC_save_shipments(char *filename, char **errmsg);
 gboolean CALC_load_shipments(char *filename, char **errmsg);
 long CALC_get_person_by_giver( unsigned long giver );
+long CALC_get_givet_by_person( unsigned long personNum );
 long CALC_get_givers_num( void );
 long CALC_get_receivers_num( void );
 int CALC_get_shipments_num( unsigned long personNum );

@@ -6,6 +6,10 @@ char *Version = PROJ_VERSION;
 char *Version = "0.0";
 #endif
 
+static long user_data;
+static time_t sec_start, sec_end;
+static long ms_start, ms_end;
+static gint timer_tag;
 /*********** CALLBACK functions ********************************/
 
 gboolean callback_button_pressed_about(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
@@ -313,7 +317,7 @@ gboolean manual_chg_button_pressed_callback(GtkWidget *widget, GdkEvent  *event,
 }
 
 /*---------------------------------------------------------*/
-gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+gboolean NEW_make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
 {
     long giversnum, receiversnum, giverIndex, receiver, personNum;
     char *command = NULL;
@@ -322,8 +326,6 @@ gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event,
     int shipments, shipmentIndex;
     char receiverName[2*sizeof(String32) + 4];
     char title[64];
-    long ms_start, ms_end;
-    time_t sec_start, sec_end;
     struct timespec spec;
     
     
@@ -331,8 +333,7 @@ gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event,
     sec_start = spec.tv_sec;
     ms_start = round(spec.tv_nsec / 1.0e6);
     if (ms_start > 999) { sec_start++; ms_start = 0; }
-    
-    
+       
     if (CALC_is_data_loaded() == FALSE)
         goto NO_SHIPMENTS_DATA;
     giversnum = CALC_get_givers_num();
@@ -362,6 +363,70 @@ gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event,
     }
     strcpy(command, destFilename);
     COMM_send_command( COMM_CMD_NOTES_FILE, command );
+    // make the initializing call to the timer callback
+    user_data = 0;
+    timeout_make_notes_callback(&user_data);
+    user_data = 1;
+    // send all shipments notes, each one every second
+    timer_tag = g_timeout_add (3000, timeout_make_notes_callback, &user_data);
+    
+FINISH:
+    if (command != NULL) free(command);
+    if (templateFilename != NULL) free(templateFilename);
+    if (destFilename != NULL) free(destFilename);
+    return TRUE;
+    
+NO_SHIPMENTS_DATA:
+    msgBoxError(window, "אין נתוני משלוחים");
+    return FALSE;
+}
+
+/*---------------------------------------------------------*/
+gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+{
+    long giversnum, receiversnum, giverIndex, receiver, personNum;
+    char *command = NULL;
+    char *destFilename = NULL;
+    char *templateFilename = NULL;
+    int shipments, shipmentIndex;
+    char receiverName[2*sizeof(String32) + 4];
+    char title[128];
+    struct timespec spec;
+    int minutes, seconds;
+    
+    if (CALC_is_data_loaded() == FALSE)
+        goto NO_SHIPMENTS_DATA;
+    giversnum = CALC_get_givers_num();
+    receiversnum = CALC_get_receivers_num();
+    if ((giversnum < 1) || (receiversnum < 1))
+        goto NO_SHIPMENTS_DATA;
+    
+    if ((templateFilename = msgBoxOpenfile( "*.odt" , "בחר קובץ תבנית")) != NULL)
+        destFilename = msgBoxSavefile( "*.odt" , "בחר קובץ לשמירת הפתקים");
+    if ((templateFilename == NULL) || (destFilename == NULL))
+        goto FINISH;
+    clock_gettime(CLOCK_REALTIME, &spec);
+    sec_start = spec.tv_sec;
+    ms_start = round(spec.tv_nsec / 1.0e6);
+    if (ms_start > 999) { sec_start++; ms_start = 0; }
+    // Open communication channel with Libreoffice
+    if (COMM_build_comm_libreoffice() == FALSE)
+    {
+        msgBoxError( window, "נכשל נסיון הקמת תקשורת עם השרת");
+        goto FINISH;
+    }
+    // Tell Libreoffice server the template file name
+    command = malloc(strlen(templateFilename) + 1);
+    strcpy(command, templateFilename);
+    COMM_send_command( COMM_CMD_TEMPLATE_FILE, command );
+    // Tell Libreoffice server the notes file name
+    if (strlen(destFilename) > strlen(templateFilename))
+    {
+        free(command);
+        command = malloc(strlen(destFilename) + 1);
+    }
+    strcpy(command, destFilename);
+    COMM_send_command( COMM_CMD_NOTES_FILE, command );
     // send all shipments notes
     free(command);
     command = malloc((sizeof(String32)+1)*(MAX_SHIPMENTS+MAX_EXTRA_SHIPMENTS));
@@ -369,40 +434,244 @@ gboolean make_notes_button_pressed_callback(GtkWidget *widget, GdkEvent  *event,
     {
         personNum = CALC_get_person_by_giver( giverIndex );
         shipments = CALC_get_shipments_num( personNum );
+#ifdef DEBUG
         g_print("Giver[%d]: ",personNum);
+#endif
         sprintf(command, "%s %s",DB_get_surname(personNum),DB_get_firstname(personNum));
         for (shipmentIndex=0; shipmentIndex < shipments; shipmentIndex++)
         {
             receiver = CALC_get_giver_shipment( personNum, shipmentIndex );
+#ifdef DEBUG
             g_print("[%d] ", receiver);
+#endif
             if (receiver >= 0)
             {
                 sprintf(receiverName, ",%s %s",DB_get_surname(receiver),DB_get_firstname(receiver));
                 strcat(command, receiverName);
             }
         } // for shipmentIndex
+#ifdef DEBUG
         g_print("\n");
-        sprintf(title, "%s %d", "מייצר פתק עבור משפחה מספר", personNum);
+#endif
+        sprintf(title, "%s %d %s %d", "מייצר פתק מספר", giverIndex, "מתוך", giversnum);
         gtk_label_set_text(labelMain, title);
+#ifdef DEBUG
         g_print("%s: sending record: %s\n", __FUNCTION__, command);
+#endif
         COMM_send_command(COMM_CMD_MAKE_NOTE, command);
+        while (gtk_events_pending())
+            gtk_main_iteration();
     } // for giverIndex
     // Tell Libreoffice server to close communication and shut down
     COMM_send_command( COMM_CMD_DONE, "Done");
-FINISH:
-    if (command != NULL) free(command);
-    if (templateFilename != NULL) free(templateFilename);
-    if (destFilename != NULL) free(destFilename);
     
     clock_gettime(CLOCK_REALTIME, &spec);
     sec_end = spec.tv_sec;
     ms_end = round(spec.tv_nsec / 1.0e6);
     if (ms_end > 999) { sec_end++; ms_end = 0; }
-    sprintf(title, "%s\n%s %d %s" , "הסתיים תהליך כתיבת הפתקים לקובץ", "התהליך ארך", (sec_end - sec_start), "שניות");
+    seconds = sec_end - sec_start;
+    minutes = seconds / 60;
+    seconds = seconds % 60;
+    sprintf(title, "%s.\n%s %d %s %d% s" , "הסתיים תהליך כתיבת הפתקים לקובץ", "התהליך ארך ",minutes ,"דקות ו ",seconds, "שניות");
     msgBoxSuccess(window, title);
+FINISH:
+    if (command != NULL) free(command);
+    if (templateFilename != NULL) free(templateFilename);
+    if (destFilename != NULL) free(destFilename);
     return TRUE;
     
 NO_SHIPMENTS_DATA:
     msgBoxError(window, "אין נתוני משלוחים");
     return FALSE;
 }
+
+
+/*---------------------------------------------------------*/
+gboolean make_note_button_pressed_callback(GtkWidget *widget, GdkEvent  *event, gpointer   user_data)
+{
+    char msg[128];
+    GtkWidget *row;
+    long giversnum, receiversnum, giverIndex, receiver, personNum;
+    char *command = NULL;
+    char *destFilename = NULL;
+    char *templateFilename = NULL;
+    int shipments, shipmentIndex, len;
+    char receiverName[2*sizeof(String32) + 4];
+    char title[64];
+    
+    row = gtk_list_box_get_selected_row( list_box );
+    if (row == NULL)
+    {
+        sprintf(msg, "יש לבחור משפחה מהרשימה");
+        msgBoxError( window, msg );
+        return FALSE;
+    }
+    personNum = gtk_list_box_row_get_index( row );
+    if (personNum < 0)
+    {
+        sprintf(msg, "יש לבחור משפחה מהרשימה");
+        msgBoxError( window, msg );
+        return FALSE;
+    }
+    if (DB_is_free(personNum) == TRUE)
+    {
+        sprintf(msg, "המשפחה שבחרת פטורה ממשלוחים");
+        msgBoxError( window, msg );
+        return FALSE;
+    }
+    if (CALC_is_data_loaded() == FALSE)
+        goto NO_SHIPMENTS_DATA;
+    giversnum = CALC_get_givers_num();
+    receiversnum = CALC_get_receivers_num();
+    if ((giversnum < 1) || (receiversnum < 1))
+        goto NO_SHIPMENTS_DATA;
+    
+    if ((templateFilename = msgBoxOpenfile( "*.odt" , "בחר קובץ תבנית")) != NULL)
+        destFilename = msgBoxSavefile( "*.odt" , "בחר קובץ לשמירת הפתק");
+    if ((templateFilename == NULL) || (destFilename == NULL))
+        goto FINISH;
+    // Open communication channel with Libreoffice
+    if (COMM_build_comm_libreoffice() == FALSE)
+    {
+        msgBoxError( window, "נכשל נסיון הקמת תקשורת עם השרת");
+        goto FINISH;
+    }
+    // Tell Libreoffice server the template file name
+    command = malloc(strlen(templateFilename) + 1);
+    strcpy(command, templateFilename);
+    COMM_send_command( COMM_CMD_TEMPLATE_FILE, command );
+    // Tell Libreoffice server the notes file name
+    if (strlen(destFilename) > strlen(templateFilename))
+    {
+        if (command != NULL)
+        {
+            free(command);
+            command = NULL;
+        }
+        command = malloc(strlen(destFilename) + 1);
+    }
+    strcpy(command, destFilename);
+    COMM_send_command( COMM_CMD_NOTES_FILE, command );
+    // send the note create command
+    shipments = CALC_get_shipments_num( personNum );
+    len = (sizeof(String32)+1)*(MAX_SHIPMENTS+MAX_EXTRA_SHIPMENTS);
+    if (strlen(destFilename) < len)
+    {
+        free(command);
+        command = malloc(len);
+    }
+    sprintf(command, "%s %s",DB_get_surname(personNum),DB_get_firstname(personNum));
+    for (shipmentIndex=0; shipmentIndex < shipments; shipmentIndex++)
+    {
+        receiver = CALC_get_giver_shipment( personNum, shipmentIndex );
+        if (receiver >= 0)
+        {
+            sprintf(receiverName, ",%s %s",DB_get_surname(receiver),DB_get_firstname(receiver));
+            strcat(command, receiverName);
+        }
+    } // for shipmentIndex
+    sprintf(title, "%s %d %s %d", "מייצר פתק עבור משפחה מספר", personNum, "מתוך", giversnum);
+    gtk_label_set_text(labelMain, title);
+    #ifdef DEBUG
+    g_print("%s %d : %s %s\n", "שולח רשומת משלוחים מספר ", giverIndex, DB_get_surname(personNum),DB_get_firstname(personNum));
+    #endif
+    COMM_send_command(COMM_CMD_MAKE_NOTE, command);
+    // Tell Libreoffice server to close communication and shut down
+#ifdef DEBUG
+     g_print("%s: sending Done.\n", __FUNCTION__);
+#endif
+    COMM_send_command( COMM_CMD_DONE, "Done");
+    sprintf(msg, "%s %s %s %s", "הפתק למשפחת ", DB_get_surname(personNum),DB_get_firstname(personNum), "נוצר בהצלחה");
+    msgBoxSuccess(window, msg);
+    
+FINISH:
+    if (command != NULL) free(command);
+    if (templateFilename != NULL) free(templateFilename);
+    if (destFilename != NULL) free(destFilename);
+    return TRUE;
+    
+NO_SHIPMENTS_DATA:
+    msgBoxError(window, "אין נתוני משלוחים");
+    return FALSE;
+}
+
+/*---------------------------------------------------------*/
+gint timeout_make_notes_callback (gpointer user_data)
+{
+    static long giversnum, receiversnum, giverIndex;
+    long receiver, personNum;
+    static char *command = NULL;
+    int shipments, shipmentIndex;
+    char receiverName[2*sizeof(String32) + 4];
+    char title[64];
+    struct timespec spec;
+    int minutes, seconds;
+
+    if (*(long*)(user_data) == (-1)) return FALSE;
+    if (*(long*)(user_data) == 0)
+    { // initializing call
+        if (CALC_is_data_loaded() == FALSE)
+            {
+            msgBoxError(window, "אין נתוני משלוחים");
+            return FALSE;
+        }
+        giversnum = CALC_get_givers_num();
+        receiversnum = CALC_get_receivers_num();
+        if ((giversnum < 1) || (receiversnum < 1)) 
+        {
+            msgBoxError(window, "אין נתוני משלוחים");
+            return FALSE;
+        }
+        if (command != NULL) free(command);
+        command = malloc((sizeof(String32)+1)*(MAX_SHIPMENTS+MAX_EXTRA_SHIPMENTS));
+        giverIndex = 0;
+    }
+    
+    // send all shipments notes
+    if (giverIndex < giversnum)
+    {
+        personNum = CALC_get_person_by_giver( giverIndex );
+        shipments = CALC_get_shipments_num( personNum );
+        sprintf(command, "%s %s",DB_get_surname(personNum),DB_get_firstname(personNum));
+        for (shipmentIndex=0; shipmentIndex < shipments; shipmentIndex++)
+        {
+            receiver = CALC_get_giver_shipment( personNum, shipmentIndex );
+            if (receiver >= 0)
+            {
+                sprintf(receiverName, ",%s %s",DB_get_surname(receiver),DB_get_firstname(receiver));
+                strcat(command, receiverName);
+            }
+        } // for shipmentIndex
+        sprintf(title, "%s %d %s %d", "מייצר פתק עבור משפחה מספר", personNum, "מתוך", giversnum);
+        gtk_label_set_text(labelMain, title);
+#ifdef DEBUG
+        g_print("%s %d : %s %s\n", "שולח רשומת משלוחים מספר ", giverIndex, DB_get_surname(personNum),DB_get_firstname(personNum));
+#endif
+        COMM_send_command(COMM_CMD_MAKE_NOTE, command);
+        giverIndex++;
+        while (gtk_events_pending())
+            gtk_main_iteration();
+        return TRUE;
+    } // if giverIndex
+    else
+    {
+        // Tell Libreoffice server to close communication and shut down
+#ifdef DEBUG
+        g_print("%s: sending Done.\n", __FUNCTION__);
+#endif
+        COMM_send_command( COMM_CMD_DONE, "Done");
+        if (command != NULL)
+            { free(command); command = NULL; }
+        clock_gettime(CLOCK_REALTIME, &spec);
+        sec_end = spec.tv_sec;
+        ms_end = round(spec.tv_nsec / 1.0e6);
+        if (ms_end > 999) { sec_end++; ms_end = 0; }
+        seconds = sec_end - sec_start;
+        minutes = seconds / 60;
+        seconds = seconds % 60;
+        sprintf(title, "%s\n%s %d %s %d%s" , "הסתיים תהליך כתיבת הפתקים לקובץ", "התהליך ארך ",minutes ,"דקות ו ",seconds, "שניות");
+        msgBoxSuccess(window, title);    
+        return FALSE;
+    }
+}
+

@@ -6,8 +6,8 @@
 #define MAX_ATTEMPS 100
 #define MIN_RESPONSE_LEN 12
 
-static char * srvFileName = "/tmp/purimsrv.txt";
-static char *clientFileName = "/tmp/purimclient.txt";
+static char * srvFileName = "/home/mwiener/purimsrv.txt";
+static char *clientFileName = "/home/mwiener/purimclient.txt";
 static int refNum = 0;
 
 //-------------------------------------------------------------
@@ -18,14 +18,22 @@ int COMM_build_comm_libreoffice( void )
     //erase communication files if exist from previous session
     unlink(clientFileName);
     unlink(srvFileName); 
-    printf("Creating Client file\n"); 
+    // Creating client file
     fd1 = open(clientFileName, O_RDWR | O_CREAT, 0777); 
     if (fd1 < 0)
     {
-        printf("Broken comm - open for create failed\n");
+        printf("Broken comm - open client file for create failed\n");
         return FALSE;
     }
-    close(fd1);    
+    close(fd1);
+    //Creating the server file
+    fd1 = open(srvFileName, O_RDWR | O_CREAT, 0777); 
+    if (fd1 < 0)
+    {
+        printf("Broken comm - open server file for create failed\n");
+        return FALSE;
+    }
+    close(fd1); 
     // Invoke the LibreOffice file macro. Start with killing all existing LibreOffice unterminated background threads.
     system("ps aux | grep -i office | awk {'print $2'} | xargs kill -9");
     system("soffice --headless --invisible \"vnd.sun.star.script:Standard.Module1.Main_Comm_Loop?language=Basic&location=application\"&");

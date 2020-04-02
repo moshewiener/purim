@@ -265,6 +265,16 @@ long CALC_get_person_by_giver( unsigned long giver )
 }
 
 /********************************************************/
+long CALC_get_givet_by_person( unsigned long personNum )
+{    
+    if (is_shipments_data_loaded == FALSE) return (-1);
+    if (giversNum < 1) return (-1);
+    if (personNum >= familiesNum) return (-1);
+    return find_giver_index( personNum );
+}
+
+
+/********************************************************/
 long CALC_get_givers_num( void )
 {
     if (is_shipments_data_loaded == FALSE) return (-1);
