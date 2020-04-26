@@ -18,8 +18,8 @@ Dim sMsg As String, giver As String, families As String
 Dim finish As Boolean
 Dim lastRef As Integer, newRef As Integer
 
-    SrvFile = "/home/mwiener/purimsrv.txt"
-    ClientFile = "/home/mwiener/purimclient.txt"
+    SrvFile = Environ("HOME") & "/purimsrv.txt"
+    ClientFile = Environ("HOME") & "/purimclient.txt"
     finish = False
     lastRef = -1
     
